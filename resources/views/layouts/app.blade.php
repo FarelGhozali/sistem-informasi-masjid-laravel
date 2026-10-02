@@ -10,48 +10,24 @@
     <noscript><link rel="stylesheet" href="{{ asset('assets/css/noscript.css') }}"></noscript>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
+    <style>
+        #bg:after {
+            background-image: url('https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=1920&auto=format&fit=crop') !important;
+        }
+    </style>
 </head>
 <body class="is-preload">
-
-    <!-- Wrapper -->
     <div id="wrapper">
-
-        <!-- Header -->
-        <header id="header">
-            <div class="logo">
-                <span class="icon fa-mosque"></span>
-            </div>
-            <div class="content">
-                <div class="inner">
-                    <h1>@yield('header_title', 'Sistem Informasi Masjid')</h1>
-                    <p>@yield('header_subtitle', 'Platform informasi masjid terintegrasi')</p>
-                </div>
-            </div>
-            <nav>
-                <ul>
-                    <li><a href="#intro">Intro</a></li>
-                    <li><a href="#about">Tentang</a></li>
-                    <li><a href="#contact">Kontak</a></li>
-                </ul>
-            </nav>
-        </header>
-
-        <!-- Main -->
+        @yield('header')
         <div id="main">
             @yield('content')
         </div>
-
-        <!-- Footer -->
-        <footer id="footer">
-            <p class="copyright">&copy; {{ date('Y') }} Sistem Informasi Masjid. Design: <a href="https://html5up.net">HTML5 UP</a>.</p>
-        </footer>
-
+        @yield('footer')
     </div>
 
     <!-- BG -->
     <div id="bg"></div>
 
-    <!-- Scripts -->
     <script src="{{ asset('assets/js/jquery.min.js') }}"></script>
     <script src="{{ asset('assets/js/browser.min.js') }}"></script>
     <script src="{{ asset('assets/js/breakpoints.min.js') }}"></script>
