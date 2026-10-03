@@ -2,14 +2,33 @@
 
 @section('title', 'Beranda - Sistem Informasi Masjid')
 
-@section('header_title', 'Sistem Informasi Masjid')
-@section('header_subtitle', 'Platform informasi masjid terintegrasi dan modern')
+@section('header')
+    <!-- Header -->
+    <header id="header">
+        <div class="logo">
+            <span class="icon fa-mosque"></span>
+        </div>
+        <div class="content">
+            <div class="inner">
+                <h1>Sistem Informasi Masjid</h1>
+                <p>Platform informasi masjid terintegrasi dan modern</p>
+            </div>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#intro">Intro</a></li>
+                <li><a href="#about">Tentang</a></li>
+                <li><a href="#contact">Kontak</a></li>
+            </ul>
+        </nav>
+    </header>
+@endsection
 
 @section('content')
     <!-- Intro -->
     <article id="intro">
         <h2 class="major">Selamat Datang</h2>
-        <span class="image main"><img src="{{ asset('images/pic01.jpg') }}" alt="Masjid" /></span>
+        <span class="image main"><img src="https://images.unsplash.com/photo-1587474260584-136574528ed5?w=1200&auto=format&fit=crop" alt="Masjid Agung" /></span>
         <p>Assalamu'alaikum Warahmatullahi Wabarakatuh. Selamat datang di Sistem Informasi Masjid, platform terintegrasi untuk mengelola dan menyebarkan informasi masjid dengan mudah dan efisien.</p>
         <p>Website ini dirancang untuk memudahkan pengurus masjid dan jamaah dalam mengakses jadwal shalat, kegiatan, pengumuman, dan informasi keuangan masjid secara transparan.</p>
     </article>
@@ -17,7 +36,7 @@
     <!-- About -->
     <article id="about">
         <h2 class="major">Tentang Kami</h2>
-        <span class="image main"><img src="{{ asset('images/pic03.jpg') }}" alt="Tentang Masjid" /></span>
+        <span class="image main"><img src="https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=1200&auto=format&fit=crop" alt="Arsitektur Masjid" /></span>
         <p>Sistem Informasi Masjid adalah platform digital yang dikembangkan untuk mendukung pengelolaan masjid di era modern. Kami percaya bahwa teknologi dapat menjadi alat yang powerful untuk memperkuat kehidupan keagamaan dan komunitas.</p>
         <p>Fitur utama kami meliputi:</p>
         <ul>
@@ -60,4 +79,11 @@
             <li><a href="#" class="icon brands fa-whatsapp"><span class="label">WhatsApp</span></a></li>
         </ul>
     </article>
+@endsection
+
+@section('footer')
+    <!-- Footer -->
+    <footer id="footer">
+        <p class="copyright">&copy; {{ date('Y') }} Sistem Informasi Masjid. Design: <a href="https://html5up.net">HTML5 UP</a>.</p>
+    </footer>
 @endsection
