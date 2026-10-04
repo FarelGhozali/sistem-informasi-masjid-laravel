@@ -1,0 +1,253 @@
+---
+/**
+ * SiteFooter — brand, navigation, hours and locations.
+ * The location list comes from the collection, so adding a second shop
+ * updates the footer too: it lists both addresses, and the hours block says
+ * which shop it belongs to.
+ */
+import Container from "@studio/core/components/Container.astro";
+import { t, business } from "../lib/site";
+import { getLocations, formatAddress, groupedHours, hoursRowLabel } from "../lib/locations";
+
+const year = new Date().getFullYear();
+const locations = await getLocations();
+const primary = locations.find((l) => l.data.primary) ?? locations[0];
+
+/* With no `primary` the grouping writes "Closed" on all seven rows, and the
+   footer announces that a shop which does not exist is shut all week. A closed
+   day and an absence of data are different things. */
+const grouped = primary ? groupedHours(primary, t) : [];
+
+const navLinks = [
+  { href: "/menu/", label: t("nav.menu") },
+  { href: "/about/", label: t("nav.about") },
+  { href: "/contact/", label: t("nav.contact") },
+];
+---
+
+<footer class="site-footer">
+  <Container>
+    <div class="site-footer__grid">
+      <div class="site-footer__col">
+        <p class="site-footer__brand">{t("site.name")}</p>
+        <p class="site-footer__tagline">{t("site.tagline")}</p>
+      </div>
+
+      <nav class="site-footer__col" aria-label={t("footer.browse")}>
+        <h2 class="site-footer__heading">{t("footer.browse")}</h2>
+        <ul class="site-footer__list">
+          {navLinks.map((l) => (
+            <li><a href={l.href}>{l.label}</a></li>
+          ))}
+        </ul>
+      </nav>
+
+      {grouped.length > 0 && (
+        <div class="site-footer__col">
+          {/* With more than one shop these are the primary shop's hours only.
+              Saying which shop is the difference between an incomplete answer
+              and a wrong one: the second branch can close at a different time,
+              and this block sits on every page of the site. */}
+          <h2 class="site-footer__heading">
+            {locations.length > 1 && primary
+              ? `${t("footer.hoursTitle")} — ${primary.data.name}`
+              : t("footer.hoursTitle")}
+          </h2>
+          <dl class="site-footer__hours">
+            {
+              grouped.map((row) => (
+                <div class="site-footer__hours-row">
+                  <dt>{hoursRowLabel(row, t)}</dt>
+                  <dd>{row.value}</dd>
+                </div>
+              ))
+            }
+          </dl>
+        </div>
+      )}
+
+      <div class="site-footer__col">
+        <h2 class="site-footer__heading">{t("footer.findUs")}</h2>
+        <ul class="site-footer__list">
+          {
+            locations.map((loc) => (
+              <li>
+                <span class="site-footer__loc-name">{loc.data.name}</span>
+                <span class="site-footer__loc-address">{formatAddress(loc)}</span>
+              </li>
+            ))
+          }
+          <li>
+            <a href={`mailto:${business.email}`}>{business.email}</a>
+          </li>
+          {
+            business.phone && (
+              <li>
+                <a href={`tel:${business.phone.replace(/\s/g, "")}`}>{business.phone}</a>
+              </li>
+            )
+          }
+        </ul>
+      </div>
+    </div>
+
+    <div class="site-footer__legal">
+      <p>© {year} {t("site.name")}. {t("footer.rights")}</p>
+      <ul class="site-footer__legal-links">
+        <li><a href="/legal/privacy/">{t("footer.privacy")}</a></li>
+        <li><a href="/legal/terms/">{t("footer.terms")}</a></li>
+      </ul>
+    </div>
+  </Container>
+</footer>
+
+<style>
+  /* The two footer tokens are the ones the theme contract hands a buyer for
+     exactly this block. Reading the palette directly here meant a buyer who
+     set --ts-c-footer-bg saw nothing change. No top margin: every page's last
+     section carries its own padding, and the margin only left a light strip
+     between that section and the footer. */
+  .site-footer {
+    background: var(--ts-c-footer-bg);
+    color: var(--ts-c-footer-text);
+    padding-block: var(--ts-space-16) var(--ts-space-8);
+    margin-top: 0;
+  }
+  .site-footer__grid {
+    display: grid;
+    gap: var(--ts-space-8);
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 640px) {
+    .site-footer__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1024px) {
+    .site-footer__grid {
+      grid-template-columns: 1.4fr 1fr 1fr 1.2fr;
+    }
+  }
+  .site-footer__col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ts-space-3);
+    /* Grid items default to their content width and refuse to shrink. At 200%
+       text on a 320px screen that pushed the footer past the viewport and the
+       whole page scrolled sideways (WCAG 1.4.4). */
+    min-width: 0;
+  }
+  .site-footer__brand {
+    margin: 0;
+    font-family: var(--ts-font-display);
+    font-size: var(--ts-text-xl);
+    font-weight: var(--ts-weight-bold);
+    letter-spacing: var(--ts-tracking-tight);
+  }
+  .site-footer__tagline {
+    margin: 0;
+    font-size: var(--ts-text-sm);
+    color: var(--ts-text-invert-muted);
+    max-width: 32ch;
+  }
+  .site-footer__heading {
+    margin: 0;
+    font-size: var(--ts-text-xs);
+    font-weight: var(--ts-weight-semibold);
+    letter-spacing: var(--ts-tracking-wide);
+    text-transform: uppercase;
+    /* Quiet, not terracotta: these headings label the least important block
+       on the page, and the accent is kept for "seasonal" and "you are here".
+       The muted ink, not a third one: the dark block already carries the
+       button white, the footer text and this, and case and tracking are what
+       make it a heading. */
+    color: var(--ts-text-invert-muted);
+  }
+  .site-footer__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ts-space-2);
+    font-size: var(--ts-text-sm);
+  }
+  .site-footer__list li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .site-footer__loc-name {
+    font-weight: var(--ts-weight-medium);
+  }
+  .site-footer__loc-address {
+    color: var(--ts-text-invert-muted);
+  }
+  .site-footer a {
+    overflow-wrap: anywhere;
+    color: var(--ts-c-footer-text);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+  }
+  .site-footer a:hover {
+    border-bottom-color: currentColor;
+  }
+  .site-footer a:focus-visible {
+    outline: none;
+    box-shadow: var(--ts-focus-ring);
+    border-radius: var(--ts-radius-sm);
+  }
+  .site-footer__hours {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ts-space-2);
+    font-size: var(--ts-text-sm);
+  }
+  .site-footer__hours-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--ts-space-4);
+  }
+  .site-footer__hours dt {
+    color: var(--ts-text-invert-muted);
+  }
+  .site-footer__hours dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .site-footer__legal {
+    margin-top: var(--ts-space-12);
+    padding-top: var(--ts-space-6);
+    border-top: 1px solid var(--ts-border-invert);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    /* The legal links are 44px tall targets; centering the row keeps the
+       copyright line level with them instead of 11px above. */
+    align-items: center;
+    gap: var(--ts-space-4);
+    font-size: var(--ts-text-xs);
+    color: var(--ts-text-invert-muted);
+  }
+  .site-footer__legal p {
+    margin: 0;
+  }
+  .site-footer__legal-links {
+    list-style: none;
+    display: flex;
+    gap: var(--ts-space-6);
+    margin: 0;
+    padding: 0;
+  }
+  /* These were 17px tall. Line height alone decides the height of an inline
+     link, and 11px text makes a target nobody can hit on the move. */
+  .site-footer__legal-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+</style>
