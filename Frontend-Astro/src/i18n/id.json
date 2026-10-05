@@ -1,0 +1,193 @@
+{
+  "site": {
+    "name": "Masjid Al-Hidayah",
+    "tagline": "Sistem Informasi Masjid — Platform informasi terintegrasi untuk jamaah"
+  },
+  "nav": {
+    "home": "Beranda",
+    "jadwal": "Jadwal Kegiatan",
+    "menu": "Menu",
+    "kegiatan": "Kegiatan",
+    "pengumuman": "Pengumuman",
+    "about": "Tentang",
+    "contact": "Kontak",
+    "cta": "Lokasi & Arah"
+  },
+  "hero": {
+    "eyebrow": "Masjid Al-Hidayah",
+    "title": "lorem ipsum dolor sit amet",
+    "lead": "lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "primaryCta": "Lokasi & Arah",
+    "secondaryCta": "Jadwal Kegiatan",
+    "imageAlt": "Fasada Masjid Al-Hidayah pada pagi hari"
+  },
+  "location": {
+    "eyebrow": "Kami di sini",
+    "title": "Lokasi Masjid",
+    "todayLabel": "Hari ini",
+    "openNow": "Buka",
+    "closedNow": "Tutup",
+    "hoursFallback": "Jam bervariasi setiap hari",
+    "allHours": "Lihat semua jam",
+    "directions": "Arah ke masjid",
+    "viewAll": "Lihat semua lokasi",
+    "amenities": "Informasi",
+    "walkInOnly": "Tamah liar terbuka untuk semua jamaah",
+    "wifi": "Wi-Fi Gratis",
+    "outlets": "Colokan listrik",
+    "laptopFriendly": "Nyaman untuk belajar"
+  },
+  "jadwal": {
+    "eyebrow": "Waktu Shalat",
+    "title": "Jadwal Shalat Harian",
+    "subtitle": "lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "pageTitle": "Jadwal Shalat",
+    "pageSubtitle": "Jadwal shalat diupdate secara berkala.",
+    "viewFull": "Lihat jadwal lengkap",
+    "seasonalBadge": "Musiman",
+    "categoriesNav": "Kategori",
+    "empty": "Belum ada jadwal di kategori ini.",
+    "categories": {
+      "shalat": "Jadwal Shalat",
+      "kegiatan": "Kegiatan Masjid",
+      "pengumuman": "Pengumuman",
+      "donasi": "Donasi & Infaq"
+    },
+    "free": "Jadwal",
+    "tags": {
+      "wajib": "Wajib",
+      "sunnah": "Sunnah",
+      "jumat": "Jumat",
+      "terjemah": "Terjemah",
+      "qiyamullail": "Qiyamullail"
+    }
+  },
+  "menu": {
+    "eyebrow": "Waktu Shalat",
+    "title": "Jadwal Kegiatan Masjid",
+    "subtitle": "lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "pageTitle": "Jadwal Shalat",
+    "pageSubtitle": "Jadwal shalat diupdate secara berkala.",
+    "viewFull": "Lihat jadwal lengkap",
+    "seasonalBadge": "Musiman",
+    "categoriesNav": "Kategori",
+    "empty": "Belum ada jadwal di kategori ini.",
+    "categories": {
+      "shalat": "Jadwal Shalat",
+      "kegiatan": "Kegiatan Masjid",
+      "pengumuman": "Pengumuman",
+      "donasi": "Donasi & Infaq"
+    },
+    "free": "Jadwal",
+    "tags": {
+      "wajib": "Wajib",
+      "sunnah": "Sunnah",
+      "jumat": "Jumat",
+      "terjemah": "Terjemah",
+      "qiyamullail": "Qiyamullail"
+    }
+  },
+  "workspace": {
+    "eyebrow": "Kenyamanan",
+    "title": "Fasilitas Bagi Jamaah",
+    "lead": "Masjid menyediakan fasilitas kenyamanan untuk jamaah yang beribadah dan belajar di sini.",
+    "wifiTitle": "Wi-Fi",
+    "wifiBody": "Gratis, tanpa sandi. Cukup untuk akses internet.",
+    "powerTitle": "Colokan Listrik",
+    "powerBody": "Tersedia di setiap area dapur dan di dekat meja belajar.",
+    "noiseTitle": "Tingkat Kebisingan",
+    "noiseBody": "Sejuk dan nyaman. Cocok untuk beribadah dan membaca Al-Qur'an.",
+    "laptopTitle": "Kebijakan Alat",
+    "laptopBody": "Dibawa selama aktivitas di masjid. Akhiri penggunaan sebelum waktu shalat berjamaah."
+  },
+  "gallery": {
+    "eyebrow": "Di dalam",
+    "title": "Ruangan, mihrab, dan jamaah",
+    "alts": {
+      "bar": "Ruang utama masjid dengan rak buku dan jendela yang terang di belakangnya",
+      "latte": "Sebuah santapan di atas piring, disajikan di atas meja kayu",
+      "pourover": "Air panas dituangkan atas saringan kopi, uap naik dari pembuat kopi",
+      "food": "Makanan ringan dan hidangan kecil di atas piring kayu",
+      "storefront": "Pintu masuk masjid dengan papan nama dan meja di samping pintu",
+      "detail": "Tumpukan cangkir keramik di samping tanaman hias di meja",
+      "generic": "Tampilan di dalam masjid"
+    }
+  },
+  "about": {
+    "eyebrow": "Kisah Kami",
+    "title": "Tentang Masjid Al-Hidayah",
+    "lead": "Masjid Al-Hidayah berdiri pada tahun 2020 dengan ide sederhana: menyediakan tempat ibadah, mengelola informasi masjid, dan memberikan ruang bagi jamaah untuk berkumpul.",
+    "summary": "Masjid Al-Hidayah adalah masjid komunitas yang menyediakan jadwal shalat, pengelolaan kegiatan, pengumuman, dan informasi keuangan secara transparan untuk semua jamaah.",
+    "sourcingTitle": "Sejarah Berdirinya",
+    "sourcingBody": "Masjid Al-Hidayah dirintis oleh warga lokal pada tahun 2020 untuk menjawab kebutuhan akan tempat ibadah dan pusat pengembangan keagamaan di lingkungan sekitar. Setiap program dikembangkan dengan komitmen pada kejujuran dan kemaslahatan umat.",
+    "nameTitle": "Mengenai Nama",
+    "nameBody": "Al-Hidayah berarti petunjuk. Nama ini diharapkan menjadi inspirasi bagi setiap jamaah yang datang, agar mendapatkan petunjuk dari Allah SWT dalam setiap langkah kehidupan.",
+    "roastTitle": "Program Kegiatan",
+    "roastBody": "Kami mengelola berbagai kegiatan mengaji, pengajian rutin, sosialisasi, dan bantuan sosial. Jadwal rotasi bulanan, jadi tanyakan kepada pengurus atau periksa halaman kegiatan untuk yang paling baru.",
+    "imageAlt": "Cahaya pagi di ruang utama masjid dan rak buku Al-Qur'an"
+  },
+  "faq": {
+    "eyebrow": "Baik untuk diketahui",
+    "title": "Pertanyaan yang Sering Ditanya",
+    "subtitle": "Jadwal, kegiatan, donasi, dan jamaah. Jawaban singkat."
+  },
+  "contact": {
+    "eyebrow": "Hubungi kami",
+    "title": "Datang Ke Masjid",
+    "subtitle": "Pertanyaan, masukan, atau ingin berkontribusi. Kami senang mendengar dari Anda.",
+    "formTitle": "Kirim pesan",
+    "hoursTitle": "Jam buka",
+    "form": {
+      "name": "Nama Anda",
+      "email": "Email",
+      "message": "Pesan",
+      "submit": "Kirim pesan",
+      "emailPlaceholder": "anda@example.com",
+      "messagePlaceholder": "Apa yang dapat kami bantu?",
+      "required": "(wajib diisi)",
+      "errName": "Masukkan nama Anda.",
+      "errEmail": "Masukkan alamat email yang dapat kami balas.",
+      "errMessage": "Katakan kami apa yang Anda butuhkan."
+    },
+    "mapAlt": "Peta yang menunjukkan lokasi kami",
+    "info": {
+      "address": "Alamat",
+      "phone": "Telepon",
+      "email": "Email"
+    },
+    "honeypotLabel": "Perusahaan"
+  },
+  "footer": {
+    "rights": "Hak cipta dilindungi undang-undang.",
+    "hoursTitle": "Jam buka",
+    "findUs": "Kami di sini",
+    "browse": "Jelajahi",
+    "privacy": "Kebijakan Privasi",
+    "terms": "Syarat & Ketentuan"
+  },
+  "notFound": {
+    "title": "Salah jalan",
+    "body": "Halaman ini tidak ada, tetapi informasi masjid ada. Biarkan kami membawa Anda kembali.",
+    "cta": "Kembali ke beranda",
+    "ctaSecondary": "Lihat jadwal shalat"
+  },
+  "legal": {
+    "updated": "Terakhir diperbarui"
+  },
+  "a11y": {
+    "mainNav": "Utama",
+    "skipToContent": "Lewati ke konten",
+    "externalLink": "Membuka di tab baru",
+    "ogImageAlt": "Interior masjid: ruang utama dengan rak buku, tanaman di angkan jendela, dan meja di dekat jendela jalan"
+  },
+  "days": {
+    "mon": "Senin",
+    "tue": "Selasa",
+    "wed": "Rabu",
+    "thu": "Kamis",
+    "fri": "Jumat",
+    "sat": "Sabtu",
+    "sun": "Minggu",
+    "range": "{from} sampai {to}"
+  }
+}
