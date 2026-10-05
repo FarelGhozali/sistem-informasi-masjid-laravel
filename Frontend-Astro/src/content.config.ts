@@ -9,9 +9,10 @@ import { glob } from "astro/loaders";
  * those used to keep its own copy of the list, undocumented: adding a
  * category to the schema left the build green and the item invisible.
  *
- * To add a category: add it here, then add its label under "menu.categories"
+ * To add a category: add it here, then add its label under "jadwal.categories"
  * in every src/i18n/*.json file. Nothing else.
  */
+
 /**
  * The tag vocabulary for menu items.
  *
@@ -22,32 +23,34 @@ import { glob } from "astro/loaders";
  *
  * Which of these reach structured data is decided in core (DIET_MAP), not
  * here: diet tags become suitableForDiet, the rest are page-only labels.
- * To add a tag: add it here, then add its label under "menu.tags" in every
+ * To add a tag: add it here, then add its label under "jadwal.tags" in every
  * src/i18n/*.json file.
  */
-export const MENU_TAGS = ["plant-based", "vegetarian", "vegan", "gluten-free", "decaf"] as const;
+export const MENU_TAGS = ["wajib", "sunnah", "jumat", "terjemah", "qiyamullail"] as const;
 
-export const MENU_CATEGORIES = ["espresso", "brew", "food", "seasonal"] as const;
+export const MENU_CATEGORIES = ["shalat", "kegiatan", "pengumuman", "donasi"] as const;
 
 
 /**
- * menu — the menu collection, grouped by category.
- * A cafe menu is small and rotates: mark an item `seasonal: true` and it
- * carries a badge in the list. Adding a drink is adding a .md file.
+ * menu — the informasi collection, grouped by category.
+ * Informasi masjid kecil dan rotatif: tandai item `seasonal: true` dan
+ * ini akan mendapat tanda di daftar. Menambah entri adalah menambah file .md.
  */
 const menu = defineCollection({
   loader: glob({ pattern: "**/*.md", base: "./src/content/menu" }),
   schema: z.object({
     name: z.string(),
     description: z.string().default(""),
-    price: z.number().positive(),
-    currency: z.string().default("USD"),
+    price: z.number().nonnegative(),
+    currency: z.string().default("IDR"),
+    /** Waktu shalat (contoh "04:30"), ditampilkan alih-alih harga pada item gratis */
+    time: z.string().optional(),
     /** To add a category, extend this enum and add its label under
-        "menu.categories" in each src/i18n/*.json file. */
+        "jadwal.categories" in each src/i18n/*.json file. */
     category: z.enum(MENU_CATEGORIES),
-    /** plant-based / vegetarian / gluten-free / decaf */
+    /** wajib / sunnah / jumat / terjemah / qiyamullail */
     tags: z.array(z.enum(MENU_TAGS)).default([]),
-    /** Seasonal badge — the part of the menu regulars come back to check */
+    /** Seasonal badge — bagian yang pengunjung selalu periksa */
     seasonal: z.boolean().default(false),
     order: z.number().int().default(100),
     available: z.boolean().default(true),
@@ -56,9 +59,9 @@ const menu = defineCollection({
 });
 
 /**
- * locations — the shop collection. Multiple locations are supported from
+ * locations — the masjid collection. Multiple locations are supported from
  * the start rather than retrofitted. With one file the site reads as a
- * single shop; add a second and the home page grows an "all locations"
+ * single masjid; add a second and the home page grows an "all locations"
  * link and the contact page becomes a grid of cards. No code changes.
  */
 const locations = defineCollection({
@@ -69,7 +72,7 @@ const locations = defineCollection({
     addressLocality: z.string(),
     addressRegion: z.string(),
     postalCode: z.string(),
-    addressCountry: z.string().default("US"),
+    addressCountry: z.string().default("ID"),
     phone: z.string().optional(),
     /** Map link — where the "Get directions" button goes */
     mapUrl: z.string().url().optional(),
@@ -83,11 +86,11 @@ const locations = defineCollection({
         })
       )
       .default([]),
-    /** The "can I work here?" facts. An honest no is still an answer. */
+    /** The "fasilitas jamaah" facts. An honest no is still an answer. */
     wifi: z.boolean().default(true),
     outlets: z.boolean().default(true),
     laptopFriendly: z.boolean().default(true),
-    /** The main shop: the home page card and the schema.org entry use it */
+    /** The main masjid: the home page card and the schema.org entry use it */
     primary: z.boolean().default(false),
     order: z.number().int().default(100),
   }),

@@ -69,7 +69,7 @@ const placeholderSite = canonical.hostname.endsWith("example.com");
         <meta property="og:image:alt" content={t("a11y.ogImageAlt")} />
       </>
     )}
-    <meta property="og:locale" content={LOCALE === "tr" ? "tr_TR" : "en_US"} />
+    <meta property="og:locale" content={LOCALE === "id" ? "id_ID" : LOCALE === "tr" ? "tr_TR" : "en_US"} />
     <meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
 
     {/* Fonts are self-hosted through @fontsource, imported from global.css.

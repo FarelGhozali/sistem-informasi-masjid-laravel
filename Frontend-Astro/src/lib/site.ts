@@ -5,19 +5,17 @@
  * of the business itself.
  */
 import { createT, DEFAULT_LOCALE, type Locale } from "@studio/core/utils/i18n";
-import en from "../i18n/en.json";
-import tr from "../i18n/tr.json";
+import id from "../i18n/id.json";
 
-/** Active language. Set it to "tr" and the whole interface switches. */
-export const LOCALE: Locale = DEFAULT_LOCALE;
+/** Active language. Set it to "id" and the whole interface switches. */
+export const LOCALE: Locale = "id";
 
-const dicts: Record<Locale, typeof en> = { en, tr };
-export const t = createT(dicts[LOCALE], en);
+const dicts: Record<Locale, typeof id> = { id };
+export const t = createT(dicts[LOCALE], id);
 
 /**
- * Where the contact form posts. Cloudflare does not process form posts on its
- * own, and with "#" the form goes nowhere: put a form service endpoint here —
- * Formspree, Basin, or similar. The step is in docs/README.md.
+ * Where the contact form posts. Leave it "#" if you handle posts through
+ * your own Laravel API endpoint instead.
  */
 export const contactFormAction = "#";
 
@@ -26,49 +24,43 @@ export const contactFormAction = "#";
  *
  * Paste the `src` of your provider's embed iframe here (in Google Maps:
  * Share -> Embed a map -> copy the src). Leave it empty and the section does
- * not render at all, so the page never shows an empty gray box where a map
- * should be.
+ * not render at all.
  *
  * The shipped Content-Security-Policy has `frame-src 'none'`, which blocks
  * every embed. When you set this, open public/_headers and replace `'none'`
- * in `frame-src` with the host of the address you pasted (the part between
- * `https://` and the next `/`), or the map stays blank.
+ * in `frame-src` with the host of the address you pasted.
  */
 export const mapEmbedUrl = "";
 
 /**
- * The identity of the business, feeding the schema.org LocalBusiness
- * fields. Addresses and hours come from the location files instead, which
- * is what makes opening a second shop a matter of adding one markdown file.
+ * The identity of the masjid, feeding the schema.org LocalBusiness
+ * fields. Addresses and hours come from the location files instead.
  */
-export const business = {
+export const masjid = {
   name: t("site.name"),
-  email: "hello@example.com",
-  phone: "+1 503 555 0142",
+  email: "info@example.com",
+  phone: "+62 21 555 0142",
   priceRange: "$",
-  servesCuisine: ["Coffee", "Light bites"],
+  servesCuisine: [],
   /** Year founded — used on the about page and in schema.org */
-  foundingYear: "2019",
+  foundingYear: "2020",
 };
 
-/* The demo's contact details are placeholders: a `.example` address can never
-   receive mail, and +1 503 555 01xx is a range reserved for fiction. Unlike
-   example.com they look real to anyone who does not know those conventions,
-   and they are not decoration — they are declared in three JSON-LD nodes and
-   in /llms.txt, so shipping them publishes a phone number that does not ring
-   and an address that bounces. The build says so once. */
+/* The demo's contact details are placeholders. Unlike example.com they look
+   real to anyone who does not know those conventions, and they are declared
+   in three JSON-LD nodes and in /llms.txt. */
 const DEMO_CONTACT = {
-  email: "hello@example.com",
-  phone: "+1 503 555 0142",
+  email: "info@example.com",
+  phone: "+62 21 555 0142",
 };
 
 if (import.meta.env.PROD) {
   const stale = (Object.keys(DEMO_CONTACT) as Array<keyof typeof DEMO_CONTACT>).filter(
-    (key) => business[key] === DEMO_CONTACT[key]
+    (key) => masjid[key] === DEMO_CONTACT[key]
   );
   if (stale.length > 0) {
     console.warn(
-      `\n  [larkin] Still the demo's ${stale.join(" and ")} in src/lib/site.ts.\n` +
+      `\n  [masjid] Still the demo's ${stale.join(" and ")} in src/lib/site.ts.\n` +
         `           These are published in structured data and in /llms.txt.\n`
     );
   }

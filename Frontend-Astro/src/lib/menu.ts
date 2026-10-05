@@ -22,10 +22,10 @@ export type MenuEntry = CollectionEntry<"menu">;
  * position, wrong decimal mark, wrong thousands mark. With the locale it is
  * `₺1.250,75`.
  */
-const NUMBER_LOCALE: Record<string, string> = { en: "en-US", tr: "tr-TR" };
+const NUMBER_LOCALE: Record<string, string> = { en: "en-US", tr: "tr-TR", id: "id-ID" };
 
 export const formatPrice = (value: number, currency: string) =>
-  new Intl.NumberFormat(NUMBER_LOCALE[LOCALE] ?? "en-US", {
+  new Intl.NumberFormat(NUMBER_LOCALE[LOCALE] ?? "id-ID", {
     style: "currency",
     currency,
     minimumFractionDigits: value % 1 === 0 ? 0 : 2,
