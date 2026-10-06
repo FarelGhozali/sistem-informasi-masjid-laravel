@@ -1,21 +1,21 @@
 ---
-name: "NW Thimbleberry Avenue"
-streetAddress: "1180 NW Thimbleberry Ave"
-addressLocality: "Portland"
-addressRegion: "OR"
-postalCode: "97210"
-addressCountry: "US"
-phone: "+1 503 555 0142"
+name: "Masjid Al-Hidayah"
+streetAddress: "Jl. Merdeka No. 12"
+addressLocality: "Jakarta Pusat"
+addressRegion: "DKI Jakarta"
+postalCode: "10110"
+addressCountry: "ID"
+phone: "+62 21 555 0142"
 hours:
   - dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-    opens: "07:00"
-    closes: "18:00"
+    opens: "05:00"
+    closes: "21:00"
   - dayOfWeek: ["Saturday"]
-    opens: "08:00"
-    closes: "19:00"
+    opens: "05:00"
+    closes: "22:00"
   - dayOfWeek: ["Sunday"]
-    opens: "08:00"
-    closes: "17:00"
+    opens: "05:00"
+    closes: "22:00"
 wifi: true
 outlets: true
 laptopFriendly: true
@@ -23,5 +23,4 @@ primary: true
 order: 10
 ---
 
-Two blocks north of the streetcar stop, on the corner with the green awning.
-Street parking is easier after nine.
+Dua blok utara dari halte bus, di sudut dengan awning hijau. Parkir jalan lebih mudah setelah jam sembilan malam.
