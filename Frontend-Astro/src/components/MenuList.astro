@@ -79,7 +79,7 @@ const groups = categories.map((category) => ({
                     </ul>
                   )}
                 </div>
-                <p class="menu-list__price">{formatPrice(item.data.price, item.data.currency)}</p>
+                <p class="menu-list__price">{item.data.time ?? (item.data.price === 0 ? t("menu.free") : formatPrice(item.data.price, item.data.currency))}</p>
               </li>
             ))}
           </ul>

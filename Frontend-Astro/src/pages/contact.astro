@@ -8,7 +8,7 @@ import Container from "@studio/core/components/Container.astro";
 import Button from "@studio/core/components/Button.astro";
 import SectionHeading from "@studio/core/components/SectionHeading.astro";
 import LocationCard from "../components/LocationCard.astro";
-import { t, business, contactFormAction, mapEmbedUrl } from "../lib/site";
+import { t, masjid, contactFormAction, mapEmbedUrl } from "../lib/site";
 import { getLocations, openingHours, groupedHours, hoursRowLabel, formatAddress } from "../lib/locations";
 import { cafeSchema } from "@studio/core/utils/seo";
 
@@ -21,25 +21,23 @@ const primary = locations.find((l) => l.data.primary) ?? locations[0];
    showing the old times. */
 const weekly = groupedHours(primary, t);
 
-const schema = cafeSchema({
-  /* The same id on all three pages: one business, one node. Without it,
-     three pages describing one shop are three nodes with the same name,
+const schema =   cafeSchema({
+  /* The same id on all three pages: one masjid, one node. Without it,
+     three pages describing one masjid are three nodes with the same name,
      address and phone but three different urls, and nothing says they
      are the same place. */
-  id: new URL("/#business", Astro.site).toString(),
-  name: business.name,
-  /* The description of the BUSINESS, not of this page. The contact page
-     passed its own subtitle here, so the machine answer to "what is this
-     place" was an invitation to fill in a form. */
+  id: new URL("/#masjid", Astro.site).toString(),
+  name: masjid.name,
+  /* The description of the MASJID, not of this page. */
   description: t("about.summary"),
-  /* The canonical page for the business, not the page this markup is on. */
+  /* The canonical page for the masjid, not the page this markup is on. */
   url: new URL("/", Astro.site).toString(),
   image: new URL("/og.jpg", Astro.site).toString(),
-  foundingDate: business.foundingYear,
-  telephone: business.phone,
-  email: business.email,
-  priceRange: business.priceRange,
-  servesCuisine: business.servesCuisine,
+  foundingDate: masjid.foundingYear,
+  telephone: masjid.phone,
+  email: masjid.email,
+  priceRange: masjid.priceRange,
+  servesCuisine: masjid.servesCuisine,
   acceptsReservations: false,
   streetAddress: primary?.data.streetAddress,
   addressLocality: primary?.data.addressLocality,
@@ -94,13 +92,13 @@ const schema = cafeSchema({
               label. */}
           <dl class="contact__direct">
             <dt>{t("contact.info.email")}</dt>
-            <dd><a href={`mailto:${business.email}`}>{business.email}</a></dd>
+            <dd><a href={`mailto:${masjid.email}`}>{masjid.email}</a></dd>
             {
-              business.phone && (
+              masjid.phone && (
                 <>
                   <dt>{t("contact.info.phone")}</dt>
                   <dd>
-                    <a href={`tel:${business.phone.replace(/\s/g, "")}`}>{business.phone}</a>
+                    <a href={`tel:${masjid.phone.replace(/\s/g, "")}`}>{masjid.phone}</a>
                   </dd>
                 </>
               )

@@ -17,7 +17,7 @@ import MenuList from "../components/MenuList.astro";
 import WorkspaceInfo from "../components/WorkspaceInfo.astro";
 import GalleryStrip from "../components/GalleryStrip.astro";
 import FaqList from "../components/FaqList.astro";
-import { t, business } from "../lib/site";
+import { t, masjid } from "../lib/site";
 import { getLocations, formatAddress, openingHours, branchNodes } from "../lib/locations";
 import { cafeSchema, faqSchema } from "@studio/core/utils/seo";
 
@@ -36,26 +36,24 @@ const hero = Object.values(heroImages)[0]?.default;
 const url = new URL("/", Astro.site).toString();
 const schema = [
   cafeSchema({
-    /* The same id on all three pages: one business, one node. Without it,
-       three pages describing one shop are three nodes with the same name,
+    /* The same id on all three pages: one masjid, one node. Without it,
+       three pages describing one masjid are three nodes with the same name,
        address and phone but three different urls, and nothing says they
        are the same place. */
-    id: new URL("/#business", Astro.site).toString(),
-    name: business.name,
-    /* The description of the BUSINESS, not of this page. The contact page
-       passed its own subtitle here, so the machine answer to "what is this
-       place" was an invitation to fill in a form. */
+    id: new URL("/#masjid", Astro.site).toString(),
+    name: masjid.name,
+    /* The description of the MASJID, not of this page. */
     description: t("about.summary"),
-    /* The canonical page for the business, not the page this markup is on. */
+    /* The canonical page for the masjid, not the page this markup is on. */
     url: new URL("/", Astro.site).toString(),
     image: new URL("/og.jpg", Astro.site).toString(),
-    foundingDate: business.foundingYear,
-    telephone: business.phone,
-    email: business.email,
-    priceRange: business.priceRange,
-    servesCuisine: business.servesCuisine,
+    foundingDate: masjid.foundingYear,
+    telephone: masjid.phone,
+    email: masjid.email,
+    priceRange: masjid.priceRange,
+    servesCuisine: masjid.servesCuisine,
     acceptsReservations: false,
-    menuUrl: new URL("/menu/", Astro.site).toString(),
+    menuUrl: new URL("/jadwal/", Astro.site).toString(),
     streetAddress: primary?.data.streetAddress,
     addressLocality: primary?.data.addressLocality,
     addressRegion: primary?.data.addressRegion,
@@ -122,7 +120,7 @@ const schema = [
                 </Button>
               )
             }
-            <a class="hero__link" href="/menu/">{t("hero.secondaryCta")}</a>
+            <a class="hero__link" href="/jadwal/">{t("hero.secondaryCta")}</a>
           </div>
         </div>
       </div>

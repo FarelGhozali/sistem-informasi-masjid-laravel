@@ -6,7 +6,7 @@
  * which shop it belongs to.
  */
 import Container from "@studio/core/components/Container.astro";
-import { t, business } from "../lib/site";
+import { t, masjid } from "../lib/site";
 import { getLocations, formatAddress, groupedHours, hoursRowLabel } from "../lib/locations";
 
 const year = new Date().getFullYear();
@@ -19,7 +19,7 @@ const primary = locations.find((l) => l.data.primary) ?? locations[0];
 const grouped = primary ? groupedHours(primary, t) : [];
 
 const navLinks = [
-  { href: "/menu/", label: t("nav.menu") },
+  { href: "/jadwal/", label: t("nav.jadwal") },
   { href: "/about/", label: t("nav.about") },
   { href: "/contact/", label: t("nav.contact") },
 ];
@@ -78,12 +78,12 @@ const navLinks = [
             ))
           }
           <li>
-            <a href={`mailto:${business.email}`}>{business.email}</a>
+            <a href={`mailto:${masjid.email}`}>{masjid.email}</a>
           </li>
           {
-            business.phone && (
+            masjid.phone && (
               <li>
-                <a href={`tel:${business.phone.replace(/\s/g, "")}`}>{business.phone}</a>
+                <a href={`tel:${masjid.phone.replace(/\s/g, "")}`}>{masjid.phone}</a>
               </li>
             )
           }
