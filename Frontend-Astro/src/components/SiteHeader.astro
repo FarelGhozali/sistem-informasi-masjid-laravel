@@ -9,18 +9,13 @@
 import Container from "@studio/core/components/Container.astro";
 import Button from "@studio/core/components/Button.astro";
 import { t } from "../lib/site";
-import { getPrimaryLocation } from "../lib/locations";
 
 const links = [
   { href: "/", label: t("nav.home") },
   { href: "/jadwal/", label: t("nav.jadwal") },
   { href: "/about/", label: t("nav.about") },
-  { href: "/contact/", label: t("nav.contact") },
 ];
 const current = Astro.url.pathname;
-const primary = await getPrimaryLocation();
-const ctaHref = primary?.data.mapUrl ?? "/contact/";
-const external = Boolean(primary?.data.mapUrl);
 ---
 
 <header class="site-header">
@@ -54,15 +49,8 @@ const external = Boolean(primary?.data.mapUrl);
       </nav>
 
       <span class="site-header__cta">
-        <Button
-          href={ctaHref}
-          variant="primary"
-          size="sm"
-          target={external ? "_blank" : undefined}
-          rel={external ? "noopener noreferrer" : undefined}
-        >
-          {t("nav.cta")}
-          {external && <span class="ts-visually-hidden"> ({t("a11y.externalLink")})</span>}
+        <Button href="/contact/" variant="primary" size="sm">
+          {t("nav.contact")}
         </Button>
       </span>
 
@@ -90,14 +78,8 @@ const external = Boolean(primary?.data.mapUrl);
               ))
             }
             <li>
-              <a
-                href={ctaHref}
-                class="site-header__panel-cta"
-                target={external ? "_blank" : undefined}
-                rel={external ? "noopener noreferrer" : undefined}
-              >
-                {t("nav.cta")}
-                {external && <span class="ts-visually-hidden"> ({t("a11y.externalLink")})</span>}
+              <a href="/contact/" class="site-header__panel-cta">
+                {t("nav.contact")}
               </a>
             </li>
           </ul>

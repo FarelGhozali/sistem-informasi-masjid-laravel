@@ -15,10 +15,10 @@
   },
   "hero": {
     "eyebrow": "Masjid Al-Hidayah",
-    "title": "lorem ipsum dolor sit amet",
-    "lead": "lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "title": "Lore Ipsum Dolor Sit Amet",
+    "lead": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
     "primaryCta": "Lokasi & Arah",
-    "secondaryCta": "Jadwal Kegiatan",
+    "secondaryCta": "Jadwal Shalat",
     "imageAlt": "Fasada Masjid Al-Hidayah pada pagi hari"
   },
   "location": {
@@ -40,7 +40,7 @@
   "jadwal": {
     "eyebrow": "Waktu Shalat",
     "title": "Jadwal Shalat Harian",
-    "subtitle": "lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "subtitle": "Jadwal shalat harian berdasarkan posisi matahari. Silakan sesuaikan dengan penyedia jadwal shalat setempat.",
     "pageTitle": "Jadwal Shalat",
     "pageSubtitle": "Jadwal shalat diupdate secara berkala.",
     "viewFull": "Lihat jadwal lengkap",
@@ -53,7 +53,7 @@
       "pengumuman": "Pengumuman",
       "donasi": "Donasi & Infaq"
     },
-    "free": "Jadwal",
+    "free": "Gratis",
     "tags": {
       "wajib": "Wajib",
       "sunnah": "Sunnah",
@@ -64,8 +64,8 @@
   },
   "menu": {
     "eyebrow": "Waktu Shalat",
-    "title": "Jadwal Kegiatan Masjid",
-    "subtitle": "lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "title": "Jadwal Kegiatan",
+    "subtitle": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
     "pageTitle": "Jadwal Shalat",
     "pageSubtitle": "Jadwal shalat diupdate secara berkala.",
     "viewFull": "Lihat jadwal lengkap",
@@ -78,7 +78,7 @@
       "pengumuman": "Pengumuman",
       "donasi": "Donasi & Infaq"
     },
-    "free": "Jadwal",
+    "free": "Gratis",
     "tags": {
       "wajib": "Wajib",
       "sunnah": "Sunnah",
