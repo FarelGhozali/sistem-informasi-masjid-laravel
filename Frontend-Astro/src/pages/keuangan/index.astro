@@ -1,0 +1,1593 @@
+---
+/**
+ * Keuangan — the mosque's financial transparency page.
+ *
+ * The shell (headings, KPI labels, table headers, filter wording) is static
+ * and translated at build time; the numbers are not. The page reads them from
+ * the Laravel API in the browser, so the balance on screen is the balance the
+ * treasurer recorded, not the one from whenever the site was last deployed.
+ *
+ * One request brings the whole ledger (api.ts pages through `limit`), and
+ * everything below is derived from that single array in the browser:
+ *   - the three KPI cards (the ringkasan endpoint stays authoritative for the
+ *     totals; its counts and the period come from the ledger itself),
+ *   - the monthly cash-flow bars and their numeric table,
+ *   - the per-category breakdown with percentage bars,
+ *   - the searchable, sortable, filterable ledger table with CSV export.
+ *
+ * Every value is written into the DOM with textContent — the strings come
+ * from the database and are rendered in the visitor's browser.
+ */
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Container from "@studio/core/components/Container.astro";
+import SectionHeading from "@studio/core/components/SectionHeading.astro";
+import { t } from "../../lib/site";
+---
+
+<BaseLayout title={t("keuangan.pageTitle")} description={t("keuangan.pageSubtitle")}>
+  <section class="keuangan-page">
+    <Container>
+      <SectionHeading
+        eyebrow={t("keuangan.eyebrow")}
+        title={t("keuangan.pageTitle")}
+        subtitle={t("keuangan.pageSubtitle")}
+        level="h1"
+      />
+
+      {/* The report has four parts; these chips make them reachable without
+          scrolling through the whole page. */}
+      <nav class="keuangan-jump" aria-label={t("keuangan.subnavAria")}>
+        <a href="#keuangan-ringkasan">{t("keuangan.navRingkasan")}</a>
+        <a href="#keuangan-arus">{t("keuangan.navArus")}</a>
+        <a href="#keuangan-kategori">{t("keuangan.navKategori")}</a>
+        <a href="#keuangan-buku">{t("keuangan.navBuku")}</a>
+      </nav>
+
+      {/* Loading / error line. Hidden once the data has arrived. aria-live so
+          a screen reader hears the numbers arrive rather than being left
+          with "Memuat". */}
+      <div id="keuangan-status" aria-live="polite">
+        <p class="keuangan-status">{t("keuangan.loading")}</p>
+      </div>
+
+      <div id="keuangan-data" hidden>
+        {/* ---- Ringkasan: three totals and the reporting period ---- */}
+        <section id="keuangan-ringkasan" aria-label={t("keuangan.summaryAria")}>
+          <div class="keuangan-kpi" id="keuangan-kpi"></div>
+          <dl class="keuangan-meta" id="keuangan-meta"></dl>
+        </section>
+
+        {/* ---- Arus kas bulanan: bars for sight, a table for detail ---- */}
+        <section id="keuangan-arus" class="keuangan-section" aria-labelledby="keuangan-arus-title">
+          <header class="keuangan-section__head">
+            <div>
+              <h2 class="keuangan-h2" id="keuangan-arus-title">{t("keuangan.chartTitle")}</h2>
+              <p class="keuangan-h2__sub">{t("keuangan.chartSubtitle")}</p>
+            </div>
+            <ul class="keuangan-legend">
+              <li>
+                <span class="keuangan-legend__dot keuangan-legend__dot--in"></span>
+                {t("keuangan.chartLegendIn")}
+              </li>
+              <li>
+                <span class="keuangan-legend__dot keuangan-legend__dot--out"></span>
+                {t("keuangan.chartLegendOut")}
+              </li>
+            </ul>
+          </header>
+          <div class="keuangan-cashflow">
+            <div class="keuangan-chart" id="keuangan-chart"></div>
+            <div class="keuangan-bulanan-wrap" id="keuangan-bulanan" role="region" aria-label={t("keuangan.bucketsAria")}></div>
+          </div>
+        </section>
+
+        {/* ---- Kategori: where the money comes from and where it goes ---- */}
+        <section id="keuangan-kategori" class="keuangan-section" aria-labelledby="keuangan-kategori-title">
+          <header class="keuangan-section__head">
+            <div>
+              <h2 class="keuangan-h2" id="keuangan-kategori-title">{t("keuangan.kategoriTitle")}</h2>
+              <p class="keuangan-h2__sub">{t("keuangan.kategoriSubtitle")}</p>
+            </div>
+          </header>
+          <div class="keuangan-kategori" id="keuangan-kategori-grid"></div>
+        </section>
+
+        {/* ---- Buku besar: the full ledger, searchable and sortable ---- */}
+        <section id="keuangan-buku" class="keuangan-section" aria-labelledby="keuangan-buku-title">
+          <header class="keuangan-section__head">
+            <div>
+              <h2 class="keuangan-h2" id="keuangan-buku-title">{t("keuangan.listTitle")}</h2>
+              <p class="keuangan-h2__sub">{t("keuangan.listSubtitle")}</p>
+            </div>
+          </header>
+
+          <div class="keuangan-toolbar">
+            <input
+              class="keuangan-input"
+              id="keuangan-search"
+              type="search"
+              aria-label={t("keuangan.searchLabel")}
+              placeholder={t("keuangan.searchPlaceholder")}
+              autocomplete="off"
+            />
+            <div class="keuangan-seg" role="group" aria-label={t("keuangan.filterLabel")}>
+              <button type="button" class="keuangan-seg__btn" data-jenis="" aria-pressed="true">
+                {t("keuangan.filterAll")}
+              </button>
+              <button type="button" class="keuangan-seg__btn" data-jenis="pemasukan" aria-pressed="false">
+                {t("keuangan.pemasukan")}
+              </button>
+              <button type="button" class="keuangan-seg__btn" data-jenis="pengeluaran" aria-pressed="false">
+                {t("keuangan.pengeluaran")}
+              </button>
+            </div>
+            <select
+              class="keuangan-input keuangan-select"
+              id="keuangan-kategori-filter"
+              aria-label={t("keuangan.filterKategoriLabel")}
+            >
+              <option value="">{t("keuangan.filterKategoriAll")}</option>
+            </select>
+            <button type="button" class="keuangan-btn" id="keuangan-csv">
+              {t("keuangan.downloadCsv")}
+            </button>
+          </div>
+
+          {/* tabindex -1: after a page change the script moves focus here so a
+              keyboard user lands at the top of the new rows. */}
+          <div class="keuangan-table-view" id="keuangan-table-view" tabindex="-1">
+            <div class="keuangan-table-wrap">
+              <table class="keuangan-table">
+                <thead>
+                  <tr>
+                    <th scope="col" aria-sort="descending">
+                      <button type="button" class="keuangan-sort" data-sort="tanggal">
+                        {t("keuangan.colDate")}<span class="keuangan-sort__icon" aria-hidden="true"></span>
+                      </button>
+                    </th>
+                    <th scope="col">{t("keuangan.colDesc")}</th>
+                    <th scope="col">{t("keuangan.colCategory")}</th>
+                    <th scope="col">{t("keuangan.colType")}</th>
+                    <th scope="col" class="keuangan-col-num">
+                      <button type="button" class="keuangan-sort" data-sort="nominal">
+                        {t("keuangan.colAmount")}<span class="keuangan-sort__icon" aria-hidden="true"></span>
+                      </button>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="keuangan-tbody"></tbody>
+              </table>
+              <p class="keuangan-empty" id="keuangan-empty" hidden></p>
+            </div>
+
+            <div class="keuangan-table-foot">
+              <p class="keuangan-showing" id="keuangan-showing"></p>
+              <nav
+                class="keuangan-pagination"
+                id="keuangan-pagination"
+                aria-label={t("keuangan.paginationLabel")}
+                hidden
+              >
+                <button type="button" class="keuangan-page-btn" id="keuangan-prev">
+                  {t("keuangan.prev")}
+                </button>
+                <span class="keuangan-pagination__pages" id="keuangan-pages"></span>
+                <button type="button" class="keuangan-page-btn" id="keuangan-next">
+                  {t("keuangan.next")}
+                </button>
+              </nav>
+            </div>
+            <p class="keuangan-truncated" id="keuangan-truncated" hidden></p>
+          </div>
+        </section>
+
+        <p class="keuangan-note">{t("keuangan.note")}</p>
+      </div>
+    </Container>
+  </section>
+
+  <noscript>
+    <Container>
+      <p class="keuangan-status">{t("keuangan.noscript")}</p>
+    </Container>
+  </noscript>
+</BaseLayout>
+
+<script>
+  import { t, masjid } from "../../lib/site";
+  import {
+    getAllKeuanganTransaksi,
+    getKeuanganRingkasan,
+    type JenisTransaksi,
+    type KeuanganRingkasan,
+    type TransaksiKeuangan,
+  } from "../../lib/api";
+
+  /* ---------- Formatting ---------- */
+
+  const rupiah = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  });
+
+  /* The API sends "2026-10-03T00:00:00.000000Z". Only the date part is
+     meaningful — the treasurer records days, not instants — and formatting it
+     in UTC keeps 3 October from arriving as 2 October on a screen west of
+     Greenwich. */
+  const utcDay = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+
+  const dateShort = new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
+  const monthShort = new Intl.DateTimeFormat("id-ID", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
+  const percent = new Intl.NumberFormat("id-ID", {
+    style: "percent",
+    maximumFractionDigits: 1,
+  });
+
+  /* ---------- Elements ---------- */
+
+  const statusHost = document.getElementById("keuangan-status")!;
+  const dataHost = document.getElementById("keuangan-data")!;
+  const kpiHost = document.getElementById("keuangan-kpi")!;
+  const metaHost = document.getElementById("keuangan-meta")!;
+  const chartHost = document.getElementById("keuangan-chart")!;
+  const bulananHost = document.getElementById("keuangan-bulanan")!;
+  const kategoriHost = document.getElementById("keuangan-kategori-grid")!;
+  const searchInput = document.getElementById("keuangan-search") as HTMLInputElement;
+  const jenisButtons = document.querySelectorAll<HTMLButtonElement>(".keuangan-seg__btn");
+  const kategoriFilter = document.getElementById("keuangan-kategori-filter") as HTMLSelectElement;
+  const csvButton = document.getElementById("keuangan-csv") as HTMLButtonElement;
+  const tbody = document.getElementById("keuangan-tbody")!;
+  const emptyHost = document.getElementById("keuangan-empty")!;
+  const showingHost = document.getElementById("keuangan-showing")!;
+  const paginationHost = document.getElementById("keuangan-pagination")!;
+  const pagesHost = document.getElementById("keuangan-pages")!;
+  const prevButton = document.getElementById("keuangan-prev") as HTMLButtonElement;
+  const nextButton = document.getElementById("keuangan-next") as HTMLButtonElement;
+  const tableView = document.getElementById("keuangan-table-view")!;
+  const truncatedHost = document.getElementById("keuangan-truncated")!;
+  const sortButtons = document.querySelectorAll<HTMLButtonElement>(".keuangan-sort");
+
+  /* ---------- State ---------- */
+
+  type Jenis = "" | JenisTransaksi;
+  type SortKey = "tanggal" | "nominal";
+
+  const PER_PAGE = 10;
+
+  let all: TransaksiKeuangan[] = [];
+  let filtered: TransaksiKeuangan[] = [];
+  let totalCount = 0;
+  let page = 1;
+  let jenis: Jenis = "";
+  let kategoriName = "";
+  let query = "";
+  let sortKey: SortKey = "tanggal";
+  let sortDir: "asc" | "desc" = "desc";
+
+  /* ---------- Small builders ---------- */
+
+  function element(tag: string, className?: string, text?: string): HTMLElement {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function statusLine(text: string, retry?: () => void): HTMLElement {
+    const p = element("p", "keuangan-status", text);
+    if (retry) {
+      const btn = element("button", "keuangan-retry", t("keuangan.retry"));
+      btn.setAttribute("type", "button");
+      btn.addEventListener("click", retry);
+      p.append(" ", btn);
+    }
+    return p;
+  }
+
+  const sumBy = (rows: TransaksiKeuangan[], kind: JenisTransaksi) =>
+    rows.reduce((sum, trx) => (trx.jenis === kind ? sum + Number(trx.nominal) : sum), 0);
+
+  const countBy = (rows: TransaksiKeuangan[], kind: JenisTransaksi) =>
+    rows.filter((trx) => trx.jenis === kind).length;
+
+  /* ---------- Ringkasan ---------- */
+
+  function kpiCard(kind: "saldo" | "in" | "out", label: string, value: string, hint: string) {
+    const card = element("div", `keuangan-kpi-card keuangan-kpi-card--${kind}`);
+    card.append(
+      element("p", "keuangan-kpi-card__label", label),
+      element("p", "keuangan-kpi-card__value", value),
+      element("p", "keuangan-kpi-card__hint", hint)
+    );
+    return card;
+  }
+
+  function renderKpi(ringkasan: KeuanganRingkasan | null) {
+    /* The ringkasan endpoint is the treasurer's own arithmetic; if it is down
+       the ledger still adds up to the same thing. */
+    const totalIn = ringkasan?.total_pemasukan ?? sumBy(all, "pemasukan");
+    const totalOut = ringkasan?.total_pengeluaran ?? sumBy(all, "pengeluaran");
+    const saldo = ringkasan?.saldo_kas ?? totalIn - totalOut;
+    kpiHost.replaceChildren(
+      kpiCard("saldo", t("keuangan.saldo"), rupiah.format(saldo), t("keuangan.saldoHint")),
+      kpiCard(
+        "in",
+        t("keuangan.totalIn"),
+        rupiah.format(totalIn),
+        t("keuangan.countIn", { count: countBy(all, "pemasukan") })
+      ),
+      kpiCard(
+        "out",
+        t("keuangan.totalOut"),
+        rupiah.format(totalOut),
+        t("keuangan.countOut", { count: countBy(all, "pengeluaran") })
+      )
+    );
+  }
+
+  function renderMeta() {
+    const items: Array<[string, string]> = [];
+    if (all.length === 0) {
+      items.push(
+        [t("keuangan.periodeLabel"), t("keuangan.periodeEmpty")],
+        [t("keuangan.updatedLabel"), "—"],
+        [t("keuangan.transaksiLabel"), t("keuangan.transaksiValue", { count: 0 })]
+      );
+    } else {
+      const days = all.map((trx) => trx.tanggal.slice(0, 10)).sort();
+      const updated = all.reduce(
+        (max, trx) => (trx.updated_at && trx.updated_at > max ? trx.updated_at : max),
+        ""
+      );
+      items.push(
+        [
+          t("keuangan.periodeLabel"),
+          t("keuangan.periodeValue", {
+            from: dateShort.format(utcDay(days[0])),
+            to: dateShort.format(utcDay(days[days.length - 1])),
+          }),
+        ],
+        [
+          t("keuangan.updatedLabel"),
+          dateShort.format(utcDay(updated || days[days.length - 1])),
+        ],
+        [t("keuangan.transaksiLabel"), t("keuangan.transaksiValue", { count: totalCount })]
+      );
+    }
+    metaHost.replaceChildren(
+      ...items.map(([label, value]) => {
+        const wrap = element("div", "keuangan-meta__item");
+        wrap.append(element("dt", undefined, label), element("dd", undefined, value));
+        return wrap;
+      })
+    );
+  }
+
+  /* ---------- Arus kas bulanan ---------- */
+
+  interface MonthBucket {
+    key: string;
+    label: string;
+    in: number;
+    out: number;
+  }
+
+  function monthlyBuckets(rows: TransaksiKeuangan[]): MonthBucket[] {
+    const map = new Map<string, MonthBucket>();
+    for (const trx of rows) {
+      const key = trx.tanggal.slice(0, 7);
+      let bucket = map.get(key);
+      if (!bucket) {
+        bucket = { key, label: monthShort.format(utcDay(`${key}-01`)), in: 0, out: 0 };
+        map.set(key, bucket);
+      }
+      if (trx.jenis === "pemasukan") bucket.in += Number(trx.nominal);
+      else bucket.out += Number(trx.nominal);
+    }
+    const keys = [...map.keys()].sort();
+    if (keys.length === 0) return [];
+    /* A month with no transactions is still part of the story; walking from
+       the first month to the last keeps the timeline continuous. */
+    const buckets: MonthBucket[] = [];
+    const [firstYear, firstMonth] = keys[0].split("-").map(Number);
+    const [lastYear, lastMonth] = keys[keys.length - 1].split("-").map(Number);
+    let year = firstYear;
+    let month = firstMonth;
+    while (year < lastYear || (year === lastYear && month <= lastMonth)) {
+      const key = `${year}-${String(month).padStart(2, "0")}`;
+      buckets.push(
+        map.get(key) ?? { key, label: monthShort.format(utcDay(`${key}-01`)), in: 0, out: 0 }
+      );
+      month += 1;
+      if (month > 12) {
+        month = 1;
+        year += 1;
+      }
+    }
+    return buckets;
+  }
+
+  function renderChart(buckets: MonthBucket[]) {
+    chartHost.replaceChildren();
+    if (buckets.length === 0) {
+      chartHost.removeAttribute("role");
+      chartHost.removeAttribute("aria-label");
+      chartHost.append(element("p", "keuangan-status", t("keuangan.chartEmpty")));
+      return;
+    }
+    /* The bars carry no numbers, so they are one image to a screen reader;
+       the monthly table beside them holds the same values as text. */
+    chartHost.setAttribute("role", "img");
+    chartHost.setAttribute("aria-label", t("keuangan.chartAria"));
+    const max = Math.max(1, ...buckets.flatMap((bucket) => [bucket.in, bucket.out]));
+    for (const bucket of buckets) {
+      const group = element("div", "keuangan-chart__group");
+      const bars = element("div", "keuangan-chart__bars");
+      const series = [
+        { kind: "in", value: bucket.in, label: t("keuangan.chartLegendIn") },
+        { kind: "out", value: bucket.out, label: t("keuangan.chartLegendOut") },
+      ] as const;
+      for (const { kind, value, label } of series) {
+        const bar = element("div", `keuangan-chart__bar keuangan-chart__bar--${kind}`);
+        bar.style.height = `${(value / max) * 100}%`;
+        if (value > 0) bar.style.minHeight = "3px";
+        bar.title = `${label}: ${rupiah.format(value)}`;
+        bars.append(bar);
+      }
+      group.append(bars, element("p", "keuangan-chart__month", bucket.label));
+      chartHost.append(group);
+    }
+  }
+
+  function renderBulanan(buckets: MonthBucket[]) {
+    if (buckets.length === 0) {
+      bulananHost.hidden = true;
+      bulananHost.replaceChildren();
+      return;
+    }
+    bulananHost.hidden = false;
+
+    const table = element("table", "keuangan-bulanan");
+    const thead = element("thead");
+    const headRow = element("tr");
+    [t("keuangan.colMonth"), t("keuangan.chartLegendIn"), t("keuangan.chartLegendOut"), t("keuangan.colNet")].forEach(
+      (label, index) => {
+        const th = element("th", index > 0 ? "keuangan-col-num" : undefined, label);
+        th.setAttribute("scope", "col");
+        headRow.append(th);
+      }
+    );
+    thead.append(headRow);
+
+    const body = element("tbody");
+    /* Newest month on top, matching the ledger's newest-first reading. */
+    for (const bucket of [...buckets].reverse()) {
+      const row = element("tr");
+      const monthCell = element("th", undefined, bucket.label);
+      monthCell.setAttribute("scope", "row");
+      const net = bucket.in - bucket.out;
+      const netClass =
+        net > 0 ? "keuangan-net--pos" : net < 0 ? "keuangan-net--neg" : "keuangan-net--zero";
+      row.append(
+        monthCell,
+        element("td", "keuangan-col-num", rupiah.format(bucket.in)),
+        element("td", "keuangan-col-num", rupiah.format(bucket.out)),
+        element("td", `keuangan-col-num ${netClass}`, rupiah.format(net))
+      );
+      body.append(row);
+    }
+    table.append(thead, body);
+    bulananHost.replaceChildren(table);
+  }
+
+  /* ---------- Rincian kategori ---------- */
+
+  interface KategoriAgg {
+    nama: string;
+    total: number;
+    count: number;
+  }
+
+  function kategoriPanel(title: string, kind: JenisTransaksi, rows: KategoriAgg[], total: number) {
+    const panel = element("article", "keuangan-kat-panel");
+    panel.append(element("h3", "keuangan-kat-panel__title", title));
+    if (rows.length === 0) {
+      panel.append(element("p", "keuangan-status", t("keuangan.kategoriEmpty")));
+      return panel;
+    }
+    const list = element("ul", "keuangan-kat-list");
+    for (const row of rows) {
+      const share = percent.format(total > 0 ? row.total / total : 0);
+      const li = element("li", "keuangan-kat");
+
+      const head = element("div", "keuangan-kat__head");
+      head.append(
+        element("span", "keuangan-kat__name", row.nama),
+        element("span", "keuangan-kat__amount", rupiah.format(row.total))
+      );
+
+      const track = element("div", "keuangan-kat__track");
+      const fill = element(
+        "div",
+        `keuangan-kat__fill keuangan-kat__fill--${kind === "pemasukan" ? "in" : "out"}`
+      );
+      fill.style.width = total > 0 ? `${(row.total / total) * 100}%` : "0%";
+      track.append(fill);
+
+      const meta =
+        t("keuangan.kategoriCount", { count: row.count }) +
+        " · " +
+        t(kind === "pemasukan" ? "keuangan.kategoriShareIn" : "keuangan.kategoriShareOut", {
+          percent: share,
+        });
+
+      li.append(head, track, element("p", "keuangan-kat__meta", meta));
+      list.append(li);
+    }
+    panel.append(list);
+    return panel;
+  }
+
+  function renderKategori() {
+    const maps: Record<JenisTransaksi, Map<string, KategoriAgg>> = {
+      pemasukan: new Map(),
+      pengeluaran: new Map(),
+    };
+    for (const trx of all) {
+      const nama = trx.kategori?.nama ?? t("keuangan.kategoriUncategorized");
+      const map = maps[trx.jenis];
+      const agg = map.get(nama) ?? { nama, total: 0, count: 0 };
+      agg.total += Number(trx.nominal);
+      agg.count += 1;
+      map.set(nama, agg);
+    }
+    const byTotal = (a: KategoriAgg, b: KategoriAgg) => b.total - a.total;
+    kategoriHost.replaceChildren(
+      kategoriPanel(
+        t("keuangan.kategoriInTitle"),
+        "pemasukan",
+        [...maps.pemasukan.values()].sort(byTotal),
+        sumBy(all, "pemasukan")
+      ),
+      kategoriPanel(
+        t("keuangan.kategoriOutTitle"),
+        "pengeluaran",
+        [...maps.pengeluaran.values()].sort(byTotal),
+        sumBy(all, "pengeluaran")
+      )
+    );
+  }
+
+  /* ---------- Buku besar ---------- */
+
+  function applyFilters() {
+    filtered = all.filter((trx) => {
+      if (jenis && trx.jenis !== jenis) return false;
+      if (
+        kategoriName &&
+        (trx.kategori?.nama ?? t("keuangan.kategoriUncategorized")) !== kategoriName
+      )
+        return false;
+      if (query) {
+        const haystack = `${trx.judul} ${trx.keterangan ?? ""} ${trx.kategori?.nama ?? ""}`.toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      return true;
+    });
+    sortRows();
+    renderTable();
+  }
+
+  function sortRows() {
+    const direction = sortDir === "asc" ? 1 : -1;
+    filtered.sort((a, b) => {
+      if (sortKey === "nominal") return (Number(a.nominal) - Number(b.nominal)) * direction;
+      const dayA = a.tanggal.slice(0, 10);
+      const dayB = b.tanggal.slice(0, 10);
+      if (dayA !== dayB) return dayA < dayB ? -direction : direction;
+      /* Same day: the later row (higher id) is the later entry. */
+      return (a.id - b.id) * direction;
+    });
+  }
+
+  function tableRow(trx: TransaksiKeuangan) {
+    const row = document.createElement("tr");
+    const masuk = trx.jenis === "pemasukan";
+
+    const dateCell = element("td", "keuangan-cell-date");
+    const time = element("time", undefined, dateShort.format(utcDay(trx.tanggal))) as HTMLTimeElement;
+    time.dateTime = trx.tanggal.slice(0, 10);
+    dateCell.append(time);
+
+    const descCell = element("td", "keuangan-cell-desc");
+    descCell.append(element("p", "keuangan-cell-desc__title", trx.judul));
+    if (trx.keterangan) {
+      descCell.append(element("p", "keuangan-cell-desc__note", trx.keterangan));
+    }
+
+    const catCell = element(
+      "td",
+      "keuangan-cell-cat",
+      trx.kategori?.nama ?? t("keuangan.kategoriUncategorized")
+    );
+
+    const typeCell = element("td");
+    typeCell.append(
+      element(
+        "span",
+        `keuangan-badge keuangan-badge--${masuk ? "in" : "out"}`,
+        masuk ? t("keuangan.badgeIn") : t("keuangan.badgeOut")
+      )
+    );
+
+    const amountCell = element(
+      "td",
+      `keuangan-col-num keuangan-amount keuangan-amount--${masuk ? "in" : "out"}`,
+      `${masuk ? "+" : "−"} ${rupiah.format(Number(trx.nominal))}`
+    );
+
+    row.append(dateCell, descCell, catCell, typeCell, amountCell);
+    return row;
+  }
+
+  function renderTable() {
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+    if (page > totalPages) page = totalPages;
+    const start = (page - 1) * PER_PAGE;
+    const rows = filtered.slice(start, start + PER_PAGE);
+
+    tbody.replaceChildren(...rows.map(tableRow));
+
+    emptyHost.hidden = filtered.length > 0;
+    emptyHost.textContent = all.length === 0 ? t("keuangan.emptyAll") : t("keuangan.emptyFiltered");
+
+    const from = filtered.length === 0 ? 0 : start + 1;
+    showingHost.textContent = t("keuangan.showing", {
+      from,
+      to: Math.min(start + PER_PAGE, filtered.length),
+      total: filtered.length,
+    });
+
+    csvButton.disabled = filtered.length === 0;
+    csvButton.title = t("keuangan.downloadTitle", { count: filtered.length });
+
+    renderPagination(totalPages);
+  }
+
+  function pageWindow(current: number, last: number): Array<number | "gap"> {
+    if (last <= 7) return Array.from({ length: last }, (_, i) => i + 1);
+    const wanted = [...new Set([1, last, current - 1, current, current + 1])]
+      .filter((p) => p >= 1 && p <= last)
+      .sort((a, b) => a - b);
+    const out: Array<number | "gap"> = [];
+    let previous = 0;
+    for (const p of wanted) {
+      if (previous && p - previous > 1) out.push("gap");
+      out.push(p);
+      previous = p;
+    }
+    return out;
+  }
+
+  function renderPagination(totalPages: number) {
+    paginationHost.hidden = totalPages <= 1;
+    prevButton.disabled = page <= 1;
+    nextButton.disabled = page >= totalPages;
+    if (totalPages <= 1) {
+      pagesHost.replaceChildren();
+      return;
+    }
+    pagesHost.replaceChildren(
+      ...pageWindow(page, totalPages).map((item) => {
+        if (item === "gap") return element("span", "keuangan-pagination__gap", "…");
+        const button = element("button", "keuangan-page-btn", String(item));
+        button.setAttribute("type", "button");
+        button.setAttribute("aria-label", t("keuangan.pageAria", { page: item }));
+        if (item === page) {
+          button.classList.add("keuangan-page-btn--current");
+          button.setAttribute("aria-current", "page");
+        } else {
+          button.addEventListener("click", () => goToPage(item));
+        }
+        return button;
+      })
+    );
+  }
+
+  function goToPage(next: number) {
+    page = next;
+    renderTable();
+    tableView.scrollIntoView({ behavior: "smooth", block: "start" });
+    tableView.focus({ preventScroll: true });
+  }
+
+  function updateSortUi() {
+    sortButtons.forEach((button) => {
+      const active = button.dataset.sort === sortKey;
+      const icon = button.querySelector(".keuangan-sort__icon");
+      if (icon) icon.textContent = active ? (sortDir === "asc" ? "↑" : "↓") : "↕";
+      const th = button.closest("th");
+      if (th) {
+        th.setAttribute(
+          "aria-sort",
+          active ? (sortDir === "asc" ? "ascending" : "descending") : "none"
+        );
+      }
+    });
+  }
+
+  function fillKategoriFilter() {
+    const names = [
+      ...new Set(all.map((trx) => trx.kategori?.nama ?? t("keuangan.kategoriUncategorized"))),
+    ].sort((a, b) => a.localeCompare(b, "id"));
+    const first = element("option", undefined, t("keuangan.filterKategoriAll")) as HTMLOptionElement;
+    first.value = "";
+    kategoriFilter.replaceChildren(
+      first,
+      ...names.map((name) => {
+        const option = element("option", undefined, name) as HTMLOptionElement;
+        option.value = name;
+        return option;
+      })
+    );
+    kategoriFilter.value = kategoriName;
+  }
+
+  /* ---------- CSV ---------- */
+
+  function csvCell(value: string) {
+    return `"${value.replaceAll('"', '""').replaceAll("\r", " ").replaceAll("\n", " ")}"`;
+  }
+
+  /* The file is written for Excel in an Indonesian locale: semicolon
+     separator, a UTF-8 byte-order mark, and amounts as plain numbers so a
+     column can be summed without retyping it. */
+  function downloadCsv() {
+    const header = [
+      t("keuangan.colDate"),
+      t("keuangan.colDesc"),
+      t("keuangan.colCategory"),
+      t("keuangan.colType"),
+      t("keuangan.colAmount"),
+      t("keuangan.colNote"),
+    ];
+    const lines = filtered.map((trx) => [
+      trx.tanggal.slice(0, 10),
+      trx.judul,
+      trx.kategori?.nama ?? "",
+      trx.jenis === "pemasukan" ? t("keuangan.badgeIn") : t("keuangan.badgeOut"),
+      String(Number(trx.nominal)),
+      trx.keterangan ?? "",
+    ]);
+    const csv = [header, ...lines].map((cells) => cells.map(csvCell).join(";")).join("\r\n");
+    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const slug = masjid.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `keuangan-${slug}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /* ---------- Wiring ---------- */
+
+  jenisButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const next = (button.dataset.jenis ?? "") as Jenis;
+      if (next === jenis) return;
+      jenis = next;
+      page = 1;
+      jenisButtons.forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+      applyFilters();
+    });
+  });
+
+  let searchTimer = 0;
+  searchInput.addEventListener("input", () => {
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => {
+      query = searchInput.value.trim().toLowerCase();
+      page = 1;
+      applyFilters();
+    }, 150);
+  });
+
+  kategoriFilter.addEventListener("change", () => {
+    kategoriName = kategoriFilter.value;
+    page = 1;
+    applyFilters();
+  });
+
+  sortButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.sort as SortKey;
+      if (key === sortKey) {
+        sortDir = sortDir === "asc" ? "desc" : "asc";
+      } else {
+        sortKey = key;
+        sortDir = "desc";
+      }
+      page = 1;
+      updateSortUi();
+      applyFilters();
+    });
+  });
+
+  prevButton.addEventListener("click", () => {
+    if (page > 1) goToPage(page - 1);
+  });
+
+  nextButton.addEventListener("click", () => {
+    if (page < Math.ceil(filtered.length / PER_PAGE)) goToPage(page + 1);
+  });
+
+  csvButton.addEventListener("click", downloadCsv);
+
+  /* ---------- Load ---------- */
+
+  async function load() {
+    statusHost.hidden = false;
+    statusHost.replaceChildren(statusLine(t("keuangan.loading")));
+    dataHost.hidden = true;
+
+    try {
+      const [ledger, ringkasan] = await Promise.all([
+        getAllKeuanganTransaksi(),
+        getKeuanganRingkasan().catch(() => null),
+      ]);
+
+      all = ledger.data;
+      totalCount = ledger.total;
+      filtered = all;
+
+      renderKpi(ringkasan);
+      renderMeta();
+      const buckets = monthlyBuckets(all);
+      renderChart(buckets);
+      renderBulanan(buckets);
+      renderKategori();
+      fillKategoriFilter();
+      applyFilters();
+      updateSortUi();
+
+      truncatedHost.hidden = !ledger.truncated;
+      if (ledger.truncated) {
+        truncatedHost.textContent = t("keuangan.truncated", {
+          shown: all.length,
+          total: ledger.total,
+        });
+      }
+
+      statusHost.hidden = true;
+      statusHost.replaceChildren();
+      dataHost.hidden = false;
+    } catch {
+      statusHost.hidden = false;
+      statusHost.replaceChildren(statusLine(t("keuangan.error"), () => void load()));
+    }
+  }
+
+  void load();
+</script>
+
+<style is:global>
+  /* Global, not scoped: everything below the loading line is built by the
+     script above, and elements made with createElement never carry Astro's
+     scope attribute. Every class is prefixed with `keuangan-`, so nothing
+     here can reach another page. */
+
+  /* The author `display` values below outrank the browser's [hidden] rule. */
+  .keuangan-page [hidden] {
+    display: none !important;
+  }
+
+  .keuangan-page {
+    padding-block: var(--ts-space-16) var(--ts-section-y);
+  }
+
+  /* ---- Anchor chips ---- */
+  .keuangan-jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ts-space-2);
+    margin-top: var(--ts-space-10);
+  }
+  .keuangan-jump a {
+    padding: var(--ts-space-2) var(--ts-space-4);
+    border: 1px solid var(--ts-border);
+    border-radius: var(--ts-radius-full);
+    font-size: var(--ts-text-sm);
+    font-weight: var(--ts-weight-medium);
+    color: var(--ts-text-muted);
+    text-decoration: none;
+    transition:
+      background-color var(--ts-duration-fast) var(--ts-ease-out),
+      border-color var(--ts-duration-fast) var(--ts-ease-out),
+      color var(--ts-duration-fast) var(--ts-ease-out);
+  }
+  .keuangan-jump a:hover {
+    background: var(--ts-surface-alt);
+    border-color: var(--ts-border-strong);
+    color: var(--ts-text);
+  }
+  .keuangan-jump a:focus-visible {
+    outline: none;
+    box-shadow: var(--ts-focus-ring);
+  }
+
+  /* ---- Ringkasan ---- */
+  .keuangan-kpi {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--ts-space-4);
+    margin-top: var(--ts-space-12);
+  }
+  @media (min-width: 720px) {
+    .keuangan-kpi {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .keuangan-kpi-card {
+    min-width: 0;
+    padding: var(--ts-space-6);
+    border: 1px solid var(--ts-border);
+    border-radius: var(--ts-radius-lg);
+    background: var(--ts-c-card-bg);
+  }
+  /* The saldo is the sum, so it is the one block on an inverted surface —
+     the same move the menu's price cards make. */
+  .keuangan-kpi-card--saldo {
+    background: var(--ts-surface-invert);
+    border-color: var(--ts-border-invert);
+  }
+  .keuangan-kpi-card__label {
+    margin: 0;
+    font-size: var(--larkin-label-size);
+    font-weight: var(--ts-weight-medium);
+    letter-spacing: var(--larkin-label-tracking);
+    text-transform: uppercase;
+    color: var(--ts-text-subtle);
+  }
+  .keuangan-kpi-card--saldo .keuangan-kpi-card__label {
+    color: var(--ts-text-invert-subtle);
+  }
+  .keuangan-kpi-card__value {
+    margin: var(--ts-space-3) 0 0;
+    font-family: var(--ts-font-display);
+    font-size: var(--ts-text-3xl);
+    font-weight: var(--ts-weight-bold);
+    letter-spacing: var(--ts-tracking-tight);
+    color: var(--ts-text);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .keuangan-kpi-card--in .keuangan-kpi-card__value {
+    color: var(--ts-color-success);
+  }
+  .keuangan-kpi-card--out .keuangan-kpi-card__value {
+    color: var(--ts-color-error);
+  }
+  .keuangan-kpi-card--saldo .keuangan-kpi-card__value {
+    color: var(--ts-text-invert);
+  }
+  .keuangan-kpi-card__hint {
+    margin: var(--ts-space-2) 0 0;
+    font-size: var(--ts-text-sm);
+    color: var(--ts-text-muted);
+  }
+  .keuangan-kpi-card--saldo .keuangan-kpi-card__hint {
+    color: var(--ts-text-invert-muted);
+  }
+
+  .keuangan-meta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--ts-space-5) var(--ts-space-8);
+    margin: var(--ts-space-8) 0 0;
+    padding-block: var(--ts-space-5);
+    border-block: 1px solid var(--ts-border);
+  }
+  @media (min-width: 720px) {
+    .keuangan-meta {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .keuangan-meta__item {
+    min-width: 0;
+  }
+  .keuangan-meta dt {
+    margin: 0;
+    font-size: var(--ts-text-xs);
+    font-weight: var(--ts-weight-medium);
+    letter-spacing: var(--ts-tracking-wide);
+    text-transform: uppercase;
+    color: var(--ts-text-subtle);
+  }
+  .keuangan-meta dd {
+    margin: var(--ts-space-1) 0 0;
+    font-size: var(--ts-text-base);
+    font-weight: var(--ts-weight-medium);
+    color: var(--ts-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Sections ---- */
+  .keuangan-section {
+    margin-top: var(--ts-space-16);
+  }
+  .keuangan-section__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: var(--ts-space-4);
+    padding-bottom: var(--ts-space-4);
+    border-bottom: 1px solid var(--ts-border-strong);
+  }
+  .keuangan-h2 {
+    margin: 0;
+    font-family: var(--ts-font-display);
+    font-size: var(--ts-text-2xl);
+    font-weight: var(--ts-weight-bold);
+    letter-spacing: var(--ts-tracking-tight);
+    color: var(--ts-text);
+    text-wrap: balance;
+  }
+  .keuangan-h2__sub {
+    margin: var(--ts-space-2) 0 0;
+    font-size: var(--ts-text-sm);
+    color: var(--ts-text-muted);
+    max-width: var(--ts-prose-max);
+  }
+  .keuangan-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ts-space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--ts-text-sm);
+    color: var(--ts-text-muted);
+  }
+  .keuangan-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ts-space-2);
+  }
+  .keuangan-legend__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex: none;
+  }
+  .keuangan-legend__dot--in {
+    background: var(--ts-color-success);
+  }
+  .keuangan-legend__dot--out {
+    background: var(--ts-color-error);
+  }
+
+  /* ---- Arus kas bulanan ---- */
+  .keuangan-cashflow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--ts-space-8);
+    margin-top: var(--ts-space-8);
+  }
+  @media (min-width: 1024px) {
+    .keuangan-cashflow {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    }
+  }
+  .keuangan-chart {
+    min-width: 0;
+    padding: var(--ts-space-6) var(--ts-space-6) var(--ts-space-3);
+    border: 1px solid var(--ts-border);
+    border-radius: var(--ts-radius-lg);
+    background: var(--ts-c-card-bg);
+    overflow-x: auto;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(44px, 1fr);
+    gap: var(--ts-space-3);
+    align-items: end;
+  }
+  .keuangan-chart__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ts-space-3);
+    min-width: 0;
+  }
+  .keuangan-chart__bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+    height: 220px;
+  }
+  .keuangan-chart__bar {
+    width: 18px;
+    border-radius: var(--ts-radius-sm) var(--ts-radius-sm) 0 0;
+    transition: opacity var(--ts-duration-fast) var(--ts-ease-out);
+  }
+  .keuangan-chart__bar:hover {
+    opacity: 0.8;
+  }
+  .keuangan-chart__bar--in {
+    background: var(--ts-color-success);
+  }
+  .keuangan-chart__bar--out {
+    background: var(--ts-color-error);
+  }
+  .keuangan-chart__month {
+    margin: 0;
+    font-size: var(--ts-text-xs);
+    color: var(--ts-text-subtle);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .keuangan-bulanan-wrap {
+    min-width: 0;
+    padding: var(--ts-space-6);
+    border: 1px solid var(--ts-border);
+    border-radius: var(--ts-radius-lg);
+    background: var(--ts-c-card-bg);
+  }
+  .keuangan-bulanan {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--ts-text-sm);
+  }
+  .keuangan-bulanan th,
+  .keuangan-bulanan td {
+    padding: var(--ts-space-3) var(--ts-space-2);
+    border-bottom: 1px solid var(--ts-border);
+    text-align: left;
+  }
+  .keuangan-bulanan thead th {
+    font-size: var(--ts-text-xs);
+    font-weight: var(--ts-weight-medium);
+    letter-spacing: var(--ts-tracking-wide);
+    text-transform: uppercase;
+    color: var(--ts-text-subtle);
+    border-bottom: 1px solid var(--ts-border-strong);
+  }
+  .keuangan-bulanan th[scope="row"] {
+    font-weight: var(--ts-weight-medium);
+    color: var(--ts-text);
+    white-space: nowrap;
+  }
+  .keuangan-bulanan td {
+    color: var(--ts-text);
+    font-variant-numeric: tabular-nums;
+  }
+  .keuangan-bulanan tbody tr:last-child th,
+  .keuangan-bulanan tbody tr:last-child td {
+    border-bottom: none;
+  }
+  .keuangan-bulanan .keuangan-col-num {
+    text-align: right;
+  }
+  .keuangan-net--pos {
+    color: var(--ts-color-success);
+  }
+  .keuangan-net--neg {
+    color: var(--ts-color-error);
+  }
+  .keuangan-net--zero {
+    color: var(--ts-text-subtle);
+  }
+
+  /* ---- Rincian kategori ---- */
+  .keuangan-kategori {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--ts-space-10);
+    margin-top: var(--ts-space-8);
+  }
+  @media (min-width: 768px) {
+    .keuangan-kategori {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .keuangan-kat-panel {
+    min-width: 0;
+  }
+  .keuangan-kat-panel__title {
+    margin: 0 0 var(--ts-space-4);
+    font-family: var(--ts-font-display);
+    font-size: var(--ts-text-lg);
+    font-weight: var(--ts-weight-semibold);
+    color: var(--ts-text);
+  }
+  .keuangan-kat-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .keuangan-kat {
+    padding-block: var(--ts-space-4);
+    border-bottom: 1px solid var(--ts-border);
+  }
+  .keuangan-kat:last-child {
+    border-bottom: none;
+  }
+  .keuangan-kat__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--ts-space-1) var(--ts-space-4);
+  }
+  .keuangan-kat__name {
+    font-size: var(--ts-text-sm);
+    font-weight: var(--ts-weight-medium);
+    color: var(--ts-text);
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .keuangan-kat__amount {
+    font-size: var(--ts-text-sm);
+    font-weight: var(--ts-weight-semibold);
+    color: var(--ts-text);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .keuangan-kat__track {
+    margin-top: var(--ts-space-2);
+    height: 6px;
+    border-radius: var(--ts-radius-full);
+    background: var(--ts-border-hair);
+    overflow: hidden;
+  }
+  .keuangan-kat__fill {
+    height: 100%;
+    border-radius: var(--ts-radius-full);
+    transition: width var(--ts-duration-slow) var(--ts-ease-out);
+  }
+  .keuangan-kat__fill--in {
+    background: var(--ts-color-success);
+  }
+  .keuangan-kat__fill--out {
+    background: var(--ts-color-error);
+  }
+  .keuangan-kat__meta {
+    margin: var(--ts-space-2) 0 0;
+    font-size: var(--ts-text-xs);
+    color: var(--ts-text-subtle);
+  }
+
+  /* ---- Toolbar buku besar ---- */
+  .keuangan-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ts-space-3);
+    margin-top: var(--ts-space-6);
+  }
+  .keuangan-input {
+    min-height: 44px;
+    padding: var(--ts-space-2) var(--ts-space-4);
+    border: 1px solid var(--ts-c-input-border);
+    border-radius: var(--ts-c-input-radius);
+    background: var(--ts-c-input-bg);
+    color: var(--ts-c-input-text);
+    font-family: var(--ts-font-sans);
+    font-size: var(--ts-text-sm);
+  }
+  .keuangan-input::placeholder {
+    color: var(--ts-c-input-placeholder);
+  }
+  .keuangan-input:focus-visible {
+    outline: none;
+    border-color: var(--ts-c-input-border-focus);
+    box-shadow: var(--ts-focus-ring);
+  }
+  #keuangan-search {
+    flex: 1 1 240px;
+    min-width: 0;
+  }
+  .keuangan-select {
+    flex: 0 1 auto;
+    max-width: 100%;
+  }
+  .keuangan-seg {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid var(--ts-border-strong);
+    border-radius: var(--ts-c-btn-radius);
+    background: var(--ts-surface);
+  }
+  .keuangan-seg__btn {
+    min-height: 38px;
+    padding-inline: var(--ts-space-4);
+    border: none;
+    border-radius: calc(var(--ts-c-btn-radius) - 3px);
+    background: transparent;
+    color: var(--ts-text-muted);
+    font-family: var(--ts-font-sans);
+    font-size: var(--ts-text-sm);
+    font-weight: var(--ts-weight-medium);
+    cursor: pointer;
+    transition:
+      background-color var(--ts-duration-fast) var(--ts-ease-out),
+      color var(--ts-duration-fast) var(--ts-ease-out);
+  }
+  .keuangan-seg__btn:hover {
+    color: var(--ts-text);
+  }
+  .keuangan-seg__btn[aria-pressed="true"] {
+    background: var(--ts-color-primary-900);
+    color: var(--ts-color-on-primary);
+  }
+  .keuangan-seg__btn:focus-visible {
+    outline: none;
+    box-shadow: var(--ts-focus-ring);
+  }
+  .keuangan-btn {
+    min-height: 44px;
+    padding: var(--ts-space-2) var(--ts-space-5);
+    border: 1px solid var(--ts-c-btn-secondary-border);
+    border-radius: var(--ts-c-btn-radius);
+    background: var(--ts-c-btn-secondary-bg);
+    color: var(--ts-c-btn-secondary-text);
+    font-family: var(--ts-font-sans);
+    font-size: var(--ts-text-sm);
+    font-weight: var(--ts-weight-medium);
+    cursor: pointer;
+    transition:
+      background-color var(--ts-duration-fast) var(--ts-ease-out),
+      border-color var(--ts-duration-fast) var(--ts-ease-out);
+  }
+  .keuangan-btn:hover:not(:disabled) {
+    background: var(--ts-c-btn-secondary-bg-hover);
+    border-color: var(--ts-c-btn-secondary-border-hover);
+  }
+  .keuangan-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .keuangan-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--ts-focus-ring);
+  }
+
+  /* ---- Tabel buku besar ---- */
+  .keuangan-table-view:focus {
+    outline: none;
+  }
+  .keuangan-table-wrap {
+    margin-top: var(--ts-space-6);
+    overflow-x: auto;
+  }
+  .keuangan-table {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: collapse;
+    font-size: var(--ts-text-sm);
+  }
+  .keuangan-table thead th {
+    padding: var(--ts-space-3) var(--ts-space-4);
+    border-bottom: 1px solid var(--ts-border-strong);
+    text-align: left;
+    font-size: var(--ts-text-xs);
+    font-weight: var(--ts-weight-medium);
+    letter-spacing: var(--ts-tracking-wide);
+    text-transform: uppercase;
+    color: var(--ts-text-subtle);
+    white-space: nowrap;
+  }
+  .keuangan-table tbody td {
+    padding: var(--ts-space-4);
+    border-bottom: 1px solid var(--ts-border);
+    vertical-align: top;
+    color: var(--ts-text);
+  }
+  .keuangan-table tbody tr:hover {
+    background: var(--ts-surface-alt);
+  }
+  .keuangan-table .keuangan-col-num {
+    text-align: right;
+  }
+  .keuangan-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+  }
+  .keuangan-sort:hover {
+    color: var(--ts-text);
+  }
+  .keuangan-sort:focus-visible {
+    outline: none;
+    border-radius: 3px;
+    box-shadow: var(--ts-focus-ring);
+  }
+  .keuangan-sort__icon {
+    font-size: 11px;
+    color: var(--ts-text-subtle);
+  }
+  .keuangan-cell-date {
+    white-space: nowrap;
+    color: var(--ts-text-muted);
+  }
+  .keuangan-cell-desc {
+    min-width: 220px;
+  }
+  .keuangan-cell-desc__title {
+    margin: 0;
+    font-weight: var(--ts-weight-medium);
+    overflow-wrap: anywhere;
+  }
+  .keuangan-cell-desc__note {
+    margin: var(--ts-space-1) 0 0;
+    font-size: var(--ts-text-xs);
+    color: var(--ts-text-muted);
+  }
+  .keuangan-cell-cat {
+    color: var(--ts-text-muted);
+  }
+  .keuangan-badge {
+    display: inline-flex;
+    padding: 3px var(--ts-space-3);
+    border-radius: var(--ts-radius-full);
+    font-size: var(--ts-text-xs);
+    font-weight: var(--ts-weight-medium);
+    white-space: nowrap;
+  }
+  .keuangan-badge--in {
+    background: var(--ts-color-success-soft);
+    color: var(--ts-color-success);
+  }
+  .keuangan-badge--out {
+    background: var(--ts-color-error-soft);
+    color: var(--ts-color-error);
+  }
+  .keuangan-amount {
+    font-weight: var(--ts-weight-semibold);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .keuangan-amount--in {
+    color: var(--ts-color-success);
+  }
+  .keuangan-amount--out {
+    color: var(--ts-color-error);
+  }
+  .keuangan-empty {
+    margin: 0;
+    padding: var(--ts-space-10) var(--ts-space-4);
+    text-align: center;
+    color: var(--ts-text-muted);
+    font-size: var(--ts-text-sm);
+  }
+  .keuangan-table-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ts-space-4);
+    margin-top: var(--ts-space-5);
+  }
+  .keuangan-showing {
+    margin: 0;
+    font-size: var(--ts-text-sm);
+    color: var(--ts-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Pagination ---- */
+  .keuangan-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ts-space-1);
+  }
+  .keuangan-pagination__pages {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ts-space-1);
+  }
+  .keuangan-page-btn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: var(--ts-space-1) var(--ts-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--ts-radius-md);
+    background: transparent;
+    color: var(--ts-text-muted);
+    font-family: var(--ts-font-sans);
+    font-size: var(--ts-text-sm);
+    font-weight: var(--ts-weight-medium);
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition:
+      background-color var(--ts-duration-fast) var(--ts-ease-out),
+      color var(--ts-duration-fast) var(--ts-ease-out);
+  }
+  .keuangan-page-btn:hover:not(:disabled):not(.keuangan-page-btn--current) {
+    background: var(--ts-surface-alt);
+    color: var(--ts-text);
+  }
+  .keuangan-page-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .keuangan-page-btn--current {
+    background: var(--ts-color-primary-900);
+    color: var(--ts-color-on-primary);
+  }
+  .keuangan-page-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--ts-focus-ring);
+  }
+  .keuangan-pagination__gap {
+    padding-inline: var(--ts-space-1);
+    color: var(--ts-text-subtle);
+  }
+  .keuangan-truncated {
+    margin: var(--ts-space-4) 0 0;
+    font-size: var(--ts-text-xs);
+    color: var(--ts-text-subtle);
+  }
+
+  /* ---- Status, retry, catatan ---- */
+  .keuangan-status {
+    margin: 0;
+    padding-block: var(--ts-space-6);
+    font-size: var(--ts-text-sm);
+    color: var(--ts-text-muted);
+  }
+  .keuangan-retry {
+    min-height: 44px;
+    padding: var(--ts-space-2) var(--ts-space-4);
+    border: 1px solid var(--ts-border-strong);
+    border-radius: var(--ts-c-btn-radius);
+    background: var(--ts-surface);
+    color: var(--ts-text);
+    font-family: var(--ts-font-sans);
+    font-size: var(--ts-text-sm);
+    font-weight: var(--ts-weight-medium);
+    cursor: pointer;
+  }
+  .keuangan-retry:hover {
+    background: var(--ts-surface-alt);
+  }
+  .keuangan-retry:focus-visible {
+    outline: none;
+    box-shadow: var(--ts-focus-ring);
+  }
+  .keuangan-note {
+    margin: var(--ts-space-12) 0 0;
+    padding-top: var(--ts-space-5);
+    border-top: 1px solid var(--ts-border);
+    font-size: var(--ts-text-sm);
+    color: var(--ts-text-muted);
+    max-width: var(--ts-prose-max);
+  }
+</style>

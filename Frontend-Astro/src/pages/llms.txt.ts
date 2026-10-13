@@ -35,7 +35,7 @@ export const GET: APIRoute = async ({ site }) => {
 
   /* The menu and the questions, in full. An assistant asked "is there a
      regular pengajian?" or "can I bring a laptop?" answers from this file or
-     not at all; a one-line pointer to /menu/ is the same as no answer. Both
+     not at all; a one-line pointer to /jadwal/ is the same as no answer. Both
      blocks read the collections, so they cannot fall behind the site. */
   const menuBlocks = availableByCategory(await getCollection("menu"))
     .map(
@@ -91,6 +91,7 @@ ${faqBlocks}
 
 - [Home](${base}/): ${t("site.tagline")}
 - [Jadwal](${base}/jadwal/): ${t("jadwal.pageSubtitle")}
+- [Keuangan](${base}/keuangan/): ${t("keuangan.pageSubtitle")}
 - [About](${base}/about/): ${t("about.title")}
 - [Contact](${base}/contact/): ${t("contact.subtitle")}
 `;
