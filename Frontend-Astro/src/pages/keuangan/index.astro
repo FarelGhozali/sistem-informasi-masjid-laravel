@@ -230,6 +230,14 @@ import { t } from "../../lib/site";
     timeZone: "UTC",
   });
 
+  /* The chart repeats the year on every tick and, with two years of books,
+     the texts touch. Only the first month, each January and the last month
+     keep the year: the axis stays anchored without the clutter. */
+  const monthOnly = new Intl.DateTimeFormat("id-ID", {
+    month: "short",
+    timeZone: "UTC",
+  });
+
   const percent = new Intl.NumberFormat("id-ID", {
     style: "percent",
     maximumFractionDigits: 1,
@@ -432,7 +440,7 @@ import { t } from "../../lib/site";
     chartHost.setAttribute("role", "img");
     chartHost.setAttribute("aria-label", t("keuangan.chartAria"));
     const max = Math.max(1, ...buckets.flatMap((bucket) => [bucket.in, bucket.out]));
-    for (const bucket of buckets) {
+    for (const [index, bucket] of buckets.entries()) {
       const group = element("div", "keuangan-chart__group");
       const bars = element("div", "keuangan-chart__bars");
       const series = [
@@ -446,7 +454,15 @@ import { t } from "../../lib/site";
         bar.title = `${label}: ${rupiah.format(value)}`;
         bars.append(bar);
       }
-      group.append(bars, element("p", "keuangan-chart__month", bucket.label));
+      const month = Number(bucket.key.slice(5, 7));
+      const showYear = index === 0 || month === 1 || index === buckets.length - 1;
+      const monthLabel = element(
+        "p",
+        "keuangan-chart__month",
+        showYear ? bucket.label : monthOnly.format(utcDay(`${bucket.key}-01`))
+      );
+      monthLabel.title = bucket.label;
+      group.append(bars, monthLabel);
       chartHost.append(group);
     }
   }
@@ -879,6 +895,11 @@ import { t } from "../../lib/site";
       statusHost.hidden = true;
       statusHost.replaceChildren();
       dataHost.hidden = false;
+
+      /* Two years of bars are wider than the card; the months a visitor came
+         for are the recent ones, so the chart opens on them. scrollWidth is
+         only measurable now that the data (and the chart) are on screen. */
+      chartHost.scrollLeft = chartHost.scrollWidth;
     } catch {
       statusHost.hidden = false;
       statusHost.replaceChildren(statusLine(t("keuangan.error"), () => void load()));
@@ -1121,7 +1142,7 @@ import { t } from "../../lib/site";
     align-items: flex-end;
     justify-content: center;
     gap: 8px;
-    height: 220px;
+    height: 320px;
   }
   .keuangan-chart__bar {
     width: 18px;
@@ -1144,8 +1165,13 @@ import { t } from "../../lib/site";
     text-align: center;
     white-space: nowrap;
   }
+  /* Two years is 24 rows — taller than the chart beside it. The card scrolls
+     its own body instead of stretching the chart into a column of empty
+     white; the header stays pinned so the numbers keep their labels. */
   .keuangan-bulanan-wrap {
     min-width: 0;
+    max-height: 420px;
+    overflow-y: auto;
     padding: var(--ts-space-6);
     border: 1px solid var(--ts-border);
     border-radius: var(--ts-radius-lg);
@@ -1163,6 +1189,10 @@ import { t } from "../../lib/site";
     text-align: left;
   }
   .keuangan-bulanan thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--ts-c-card-bg);
     font-size: var(--ts-text-xs);
     font-weight: var(--ts-weight-medium);
     letter-spacing: var(--ts-tracking-wide);

@@ -3,8 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\JadwalKegiatan;
-use App\Models\KategoriKeuangan;
-use App\Models\TransaksiKeuangan;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -45,120 +43,12 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 2. Kategori Keuangan
-        $kategoriList = [
-            // Pemasukan
-            ['nama' => 'Kotak Infaq Jumat', 'jenis' => 'pemasukan', 'deskripsi' => 'Hasil perolehan infaq dan sedekah saat sholat Jumat'],
-            ['nama' => 'Infaq Harian / Subuh', 'jenis' => 'pemasukan', 'deskripsi' => 'Kotak infaq harian dan pengajian'],
-            ['nama' => 'Donasi Renovasi Masjid', 'jenis' => 'pemasukan', 'deskripsi' => 'Sumbangan khusus renovasi dan pembangunan sarana masjid'],
-            ['nama' => 'Zakat, Infaq & Sedekah (ZIS)', 'jenis' => 'pemasukan', 'deskripsi' => 'Penerimaan dana zakat mal/fitrah dan fidyah'],
-            ['nama' => 'Sponsor / Donatur Kegiatan', 'jenis' => 'pemasukan', 'deskripsi' => 'Dana sponsor kajian atau peringatan hari besar Islam'],
+        // 2. Kategori & Riwayat Keuangan — dua tahun buku, ratusan transaksi.
+        //    Detailnya di KeuanganSeeder; dijalankan juga dengan
+        //    `php artisan db:seed --class=KeuanganSeeder`.
+        $this->call(KeuanganSeeder::class);
 
-            // Pengeluaran
-            ['nama' => 'Listrik, Air & Internet', 'jenis' => 'pengeluaran', 'deskripsi' => 'Tagihan rutin PLN, PDAM, dan WiFi masjid'],
-            ['nama' => 'Honor Imam, Muadzin & Marbot', 'jenis' => 'pengeluaran', 'deskripsi' => 'Kompensasi bulanan petugas masjid'],
-            ['nama' => 'Operasional Kajian & Tabligh Akbar', 'jenis' => 'pengeluaran', 'deskripsi' => 'Bisyarah pemateri, konsumsi jamaah, dan sound system'],
-            ['nama' => 'Kebersihan & Pemeliharaan Sarana', 'jenis' => 'pengeluaran', 'deskripsi' => 'Peralatan kebersihan, perawatan AC, dan perbaikan sound'],
-            ['nama' => 'Santunan Yatim & Dhuafa', 'jenis' => 'pengeluaran', 'deskripsi' => 'Penyaluran dana sosial bagi masyarakat sekitar'],
-        ];
-
-        $kategoriMap = [];
-        foreach ($kategoriList as $item) {
-            $cat = KategoriKeuangan::firstOrCreate(
-                ['nama' => $item['nama']],
-                [
-                    'jenis' => $item['jenis'],
-                    'deskripsi' => $item['deskripsi'],
-                ]
-            );
-            $kategoriMap[$item['nama']] = $cat->id;
-        }
-
-        // 3. Transaksi Keuangan Realistis
-        $transaksiList = [
-            [
-                'kategori' => 'Kotak Infaq Jumat',
-                'jenis' => 'pemasukan',
-                'judul' => 'Perolehan Infaq Jumat Pekan ke-1',
-                'nominal' => 3850000,
-                'tanggal' => now()->subDays(14)->toDateString(),
-                'keterangan' => 'Dihitung bersama 2 orang saksi jamaah',
-            ],
-            [
-                'kategori' => 'Donasi Renovasi Masjid',
-                'jenis' => 'pemasukan',
-                'judul' => 'Wakaf Karpet & Sound dari H. Sulaiman',
-                'nominal' => 5000000,
-                'tanggal' => now()->subDays(10)->toDateString(),
-                'keterangan' => 'Transfer via rekening BSI Masjid',
-            ],
-            [
-                'kategori' => 'Kotak Infaq Jumat',
-                'jenis' => 'pemasukan',
-                'judul' => 'Perolehan Infaq Jumat Pekan ke-2',
-                'nominal' => 4120000,
-                'tanggal' => now()->subDays(7)->toDateString(),
-                'keterangan' => 'Total infaq sholat Jumat',
-            ],
-            [
-                'kategori' => 'Infaq Harian / Subuh',
-                'jenis' => 'pemasukan',
-                'judul' => 'Infaq Kuliah Subuh Ahad Pagi',
-                'nominal' => 950000,
-                'tanggal' => now()->subDays(6)->toDateString(),
-                'keterangan' => 'Kotak keliling kajian rutin ahad',
-            ],
-            [
-                'kategori' => 'Listrik, Air & Internet',
-                'jenis' => 'pengeluaran',
-                'judul' => 'Pembayaran Tagihan Listrik PLN Bulan Ini',
-                'nominal' => 1250000,
-                'tanggal' => now()->subDays(8)->toDateString(),
-                'keterangan' => 'Pemakaian AC dan penerangan masjid',
-            ],
-            [
-                'kategori' => 'Kebersihan & Pemeliharaan Sarana',
-                'jenis' => 'pengeluaran',
-                'judul' => 'Service & Cuci AC 6 Unit',
-                'nominal' => 750000,
-                'tanggal' => now()->subDays(5)->toDateString(),
-                'keterangan' => 'Service berkala teknisi AC',
-            ],
-            [
-                'kategori' => 'Operasional Kajian & Tabligh Akbar',
-                'jenis' => 'pengeluaran',
-                'judul' => 'Bisyarah Ustadz & Snack Jamaah Kajian Ahad',
-                'nominal' => 850000,
-                'tanggal' => now()->subDays(4)->toDateString(),
-                'keterangan' => 'Kajian tafsir tematik',
-            ],
-            [
-                'kategori' => 'Honor Imam, Muadzin & Marbot',
-                'jenis' => 'pengeluaran',
-                'judul' => 'Honor Marbot dan Petugas Kebersihan',
-                'nominal' => 2000000,
-                'tanggal' => now()->subDays(2)->toDateString(),
-                'keterangan' => 'Gaji marbot masjid bulan berjalan',
-            ],
-        ];
-
-        foreach ($transaksiList as $trx) {
-            TransaksiKeuangan::firstOrCreate(
-                [
-                    'judul' => $trx['judul'],
-                    'tanggal' => $trx['tanggal'],
-                ],
-                [
-                    'kategori_keuangan_id' => $kategoriMap[$trx['kategori']] ?? null,
-                    'user_id' => $bendahara->id,
-                    'jenis' => $trx['jenis'],
-                    'nominal' => $trx['nominal'],
-                    'keterangan' => $trx['keterangan'],
-                ]
-            );
-        }
-
-        // 4. Jadwal Kegiatan Realistis
+        // 3. Jadwal Kegiatan Realistis
         $kegiatanList = [
             [
                 'nama_kegiatan' => 'Kajian Rutin Ahad Subuh: Menyelami Riyadhus Shalihin',
