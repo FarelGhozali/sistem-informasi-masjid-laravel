@@ -1,52 +1,41 @@
-# Demo Image License — Larkin
+# Demo Image License
 
-All demo photographs in `src/assets/images/` and `public/og.jpg` were
-**AI-generated** for this template (Higgsfield platform, `nano_banana_flash`
-model, generated 2026-09-02). They depict a fictional coffee shop
-("Fern & Filter") and no real place, person or product.
+The photographs in `src/assets/images/` and `public/og.jpg` are real
+photographs of Indonesian mosques, taken by volunteers and reused from
+Wikimedia Commons under Creative Commons licenses. Every file here is a
+cropped and resized (and re-compressed) version of the original it points
+to; nothing else was changed.
 
-- You may keep, modify or replace them in websites you build with this template.
-- They are demo content: for a real client project we recommend replacing them
-  with the client's own photography.
-- Do not resell or redistribute these images as standalone stock/media assets.
+| File | Original | Author | License |
+|---|---|---|---|
+| `01-hero-room.jpg` | [Jakarta - Istiqlal Mosque, interior](https://commons.wikimedia.org/wiki/File:Jakarta_-_Istiqlal_Mosque,_interior.jpg) | P. Hughes | CC BY 4.0 |
+| `02-bar.jpg` | [Istiqlal Mosque Reciting Al Quran](https://commons.wikimedia.org/wiki/File:Istiqlal_Mosque_Reciting_Al_Quran.JPG) | Gunawan Kartapranata | CC BY-SA 3.0 |
+| `03-latte.jpg` | [Bedug at Istiqlal Mosque](https://commons.wikimedia.org/wiki/File:Bedug_at_Istiqlal_Mosque.jpg) | Baldersdod | CC BY-SA 4.0 |
+| `04-pourover.jpg` | [Dome and Chandelier Istiqlal Mosque Jakarta](https://commons.wikimedia.org/wiki/File:Dome_and_Chandelier_Istiqlal_Mosque_Jakarta.jpg) | Aisha Tanduk | CC BY-SA 4.0 |
+| `05-food.jpg` | [Hallway Istiqlal Mosque Jakarta](https://commons.wikimedia.org/wiki/File:Hallway_Istiqlal_Mosque_Jakarta.jpg) | Aisha Tanduk | CC BY-SA 4.0 |
+| `06-storefront.jpg` | [Masjid Nasional Al-Akbar Surabaya-1](https://commons.wikimedia.org/wiki/File:Masjid_Nasional_Al-Akbar_Surabaya-1.jpg) | Indonesiagood | CC BY 4.0 |
+| `07-detail.jpg` | [Mihrab of the Istiqlal Mosque Jakarta](https://commons.wikimedia.org/wiki/File:Mihrab_of_the_Istiqlal_Mosque_Jakarta.jpg) | Aisha Tanduk | CC BY-SA 4.0 |
+| `public/og.jpg` | [Masjid Nasional Al-Akbar Surabaya-29](https://commons.wikimedia.org/wiki/File:Masjid_Nasional_Al-Akbar_Surabaya-29.jpg) | Indonesiagood | CC BY 4.0 |
 
-## Restrictions passed down from the generation platform
+## What the licenses require
 
-You may not use these images — in whole or in part — to train, fine-tune, distill,
-or otherwise develop any machine learning model, neural network, or AI system.
-This restriction is imposed by the upstream generation platform's terms and passes
-to every recipient of these files.
+- **CC BY 4.0** ([text](https://creativecommons.org/licenses/by/4.0/)) —
+  keep the credit: author, title, license, and a link to the license.
+- **CC BY-SA 3.0 / 4.0** ([text](https://creativecommons.org/licenses/by-sa/4.0/)) —
+  the same credit as above, and **share-alike**: the cropped files shipped
+  in this repository are adaptations, so if you redistribute them (in this
+  site or elsewhere) they must stay under the same CC BY-SA license.
+- Keeping this file, or an equivalent credit page on the live site, is
+  enough to satisfy the attribution.
 
-## No exclusivity
+## These are placeholders
 
-These images were generated for this template, not licensed from a stock library.
-We do not claim, and cannot guarantee, that they are unique: an AI model may produce
-similar output for other users. No exclusivity is claimed or granted.
+The photos show two other real mosques — Masjid Istiqlal Jakarta and Masjid
+Nasional Al-Akbar Surabaya — while this site describes its own fictional
+"Masjid Al-Hidayah". For a real project, replace them with photographs of
+the mosque itself (`docs/README.md`, step 5), or keep them and accept that
+they depict different buildings.
 
-## AI disclosure notice
-
-These images are AI-generated (`nano_banana_flash` model, via Higgsfield; the
-model name is the one the platform's own job records use).
-The generation service may embed an invisible synthetic-content signal
-(such as SynthID). We do not promise that such a signal is present in every
-file or that it survives editing, cropping or re-encoding.
-
-If you deploy them to represent a REAL business, product, place or event — rather
-than as placeholder or illustrative content — you may become a "deployer" under
-Article 50(4) of EU Regulation 2024/1689 (the AI Act; Article 50 applies from 2 August 2026)
-and may be required to disclose that the imagery is AI-generated. Compliance in that
-deployment context is your responsibility, not ours.
-
-Recommended: replace these images with genuine photography before launching a real
-business site.
-
-## No real persons
-
-No image in this pack is intended to depict any real, identifiable person. If you
-believe an image resembles a real individual, contact us and we will replace it.
-
-## Withdrawal cooperation
-
-If we notify you that a specific image must be withdrawn for legal reasons, you
-agree to stop distributing it and replace it within 30 days. We will supply a
-drop-in replacement at no cost.
+You may keep, modify or replace any file in this folder for sites you build
+with this template. Do not resell or redistribute these images as
+standalone stock/media assets.

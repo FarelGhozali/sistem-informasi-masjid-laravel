@@ -20,7 +20,7 @@
     "lead": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
     "primaryCta": "Lokasi & Arah",
     "secondaryCta": "Jadwal Shalat",
-    "imageAlt": "Fasada Masjid Al-Hidayah pada pagi hari"
+    "imageAlt": "Ruang utama masjid dengan tiang-tiang besar dan jamaah yang beribadah"
   },
   "location": {
     "eyebrow": "Kami di sini",
@@ -179,12 +179,12 @@
     "eyebrow": "Di dalam",
     "title": "Ruangan, mihrab, dan jamaah",
     "alts": {
-      "bar": "Ruang utama masjid dengan rak buku dan jendela yang terang di belakangnya",
-      "latte": "Sebuah santapan di atas piring, disajikan di atas meja kayu",
-      "pourover": "Air panas dituangkan atas saringan kopi, uap naik dari pembuat kopi",
-      "food": "Makanan ringan dan hidangan kecil di atas piring kayu",
-      "storefront": "Pintu masuk masjid dengan papan nama dan meja di samping pintu",
-      "detail": "Tumpukan cangkir keramik di samping tanaman hias di meja",
+      "bar": "Jamaah membaca Al-Qur'an di ruang utama masjid dengan rak mushaf di belakangnya",
+      "latte": "Bedug besar berukir dengan rangka kayu di dalam masjid",
+      "pourover": "Lampu gantung besar di bawah kubah masjid, dilihat dari bawah",
+      "food": "Koridor masjid dengan lantai keramik yang memantulkan cahaya",
+      "storefront": "Fasad masjid dengan kubah hijau dan pepohonan di halaman",
+      "detail": "Mihrab masjid dengan kaligrafi dan ukiran emas",
       "generic": "Tampilan di dalam masjid"
     }
   },
@@ -199,7 +199,7 @@
     "nameBody": "Al-Hidayah berarti petunjuk. Nama ini diharapkan menjadi inspirasi bagi setiap jamaah yang datang, agar mendapatkan petunjuk dari Allah SWT dalam setiap langkah kehidupan.",
     "roastTitle": "Program Kegiatan",
     "roastBody": "Kami mengelola berbagai kegiatan mengaji, pengajian rutin, sosialisasi, dan bantuan sosial. Jadwal rotasi bulanan, jadi tanyakan kepada pengurus atau periksa halaman kegiatan untuk yang paling baru.",
-    "imageAlt": "Cahaya pagi di ruang utama masjid dan rak buku Al-Qur'an"
+    "imageAlt": "Jamaah membaca Al-Qur'an di ruang utama masjid"
   },
   "faq": {
     "eyebrow": "Baik untuk diketahui",
@@ -253,7 +253,7 @@
     "mainNav": "Utama",
     "skipToContent": "Lewati ke konten",
     "externalLink": "Membuka di tab baru",
-    "ogImageAlt": "Interior masjid: ruang utama dengan rak buku, tanaman di angkan jendela, dan meja di dekat jendela jalan"
+    "ogImageAlt": "Interior masjid: ruang utama yang lapang dengan lantai marmer yang memantulkan cahaya"
   },
   "days": {
     "mon": "Senin",
