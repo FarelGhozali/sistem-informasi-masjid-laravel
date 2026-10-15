@@ -1,0 +1,76 @@
+# Production stack: nginx (Astro build + /api proxy on one origin), PHP-FPM
+# (Laravel), PostgreSQL. Kept separate from compose.yaml, which is the Sail
+# development stack.
+#
+#   docker compose -f compose.production.yaml up -d --build
+#
+# Overridable via the environment or a .env file next to this file:
+# WEB_PORT, SITE_URL, APP_URL, PUBLIC_API_BASE_URL, DB_DATABASE, DB_USERNAME,
+# DB_PASSWORD, SEED_DEMO_DATA.
+name: masjid
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-masjid}
+      POSTGRES_USER: ${DB_USERNAME:-masjid}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-masjid} -d ${DB_DATABASE:-masjid}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/production/app/Dockerfile
+    environment:
+      APP_NAME: "Sistem Informasi Masjid"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY:-}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_LOCALE: id
+      APP_FALLBACK_LOCALE: id
+      APP_FAKER_LOCALE: id_ID
+      LOG_CHANNEL: stderr
+      LOG_LEVEL: info
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: ${DB_DATABASE:-masjid}
+      DB_USERNAME: ${DB_USERNAME:-masjid}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      SESSION_DRIVER: database
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      MAIL_MAILER: log
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/production/web/Dockerfile
+      args:
+        SITE: ${SITE_URL:-http://localhost:8080}
+        PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-/api}
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  app-storage:
