@@ -90,7 +90,7 @@ ${faqBlocks}
 ## Pages
 
 - [Home](${base}/): ${t("site.tagline")}
-- [Jadwal](${base}/jadwal/): ${t("jadwal.pageSubtitle")}
+- [Jadwal](${base}/jadwal/): ${t("kegiatan.pageSubtitle")}
 - [Keuangan](${base}/keuangan/): ${t("keuangan.pageSubtitle")}
 - [About](${base}/about/): ${t("about.title")}
 - [Contact](${base}/contact/): ${t("contact.subtitle")}

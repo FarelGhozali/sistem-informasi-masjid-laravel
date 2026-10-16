@@ -11,6 +11,7 @@
 import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
 import { sitemapXml, xmlResponse } from "@studio/core/utils/crawl";
+import { getAllKegiatan } from "../lib/api";
 
 const PATHS = [
   { path: "/" },
@@ -26,9 +27,24 @@ export const GET: APIRoute = async ({ site }) => {
      the date matters, because a privacy policy is read against the day it was
      written. The rest carry no lastmod rather than a guessed one. */
   const legal = (await getCollection("legal")).sort((a, b) => a.id.localeCompare(b.id));
+
+  /* The agenda's detail pages are generated at build time from the same API
+     call, so the map lists exactly the pages that exist. If the API is down
+     while building, the map simply omits them rather than guessing. */
+  let kegiatan: Array<{ path: string; lastmod: string }> = [];
+  try {
+    kegiatan = (await getAllKegiatan()).data.map((k) => ({
+      path: `/jadwal/${encodeURIComponent(k.slug)}/`,
+      lastmod: k.updated_at.slice(0, 10),
+    }));
+  } catch {
+    kegiatan = [];
+  }
+
   const paths = [
     ...PATHS,
     ...legal.map((entry) => ({ path: `/legal/${entry.id}/`, lastmod: entry.data.updated })),
+    ...kegiatan,
   ];
   return xmlResponse(sitemapXml(site, paths));
 };

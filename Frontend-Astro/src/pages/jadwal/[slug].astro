@@ -1,0 +1,389 @@
+---
+/**
+ * Detail kegiatan — one page per event, generated at build time.
+ *
+ * The list page reads the agenda in the browser, but a detail page is where
+ * a search engine and a shared link land, so it ships as real HTML: every
+ * slug the API knows at build time gets its own page. An event added after
+ * the last build appears on the list immediately and gets its detail page
+ * on the next one; if the API is unreachable while building, the build
+ * still succeeds and this route simply generates nothing.
+ *
+ * The takmir writes the description in a rich editor. That HTML is never
+ * rendered as markup here — the API also sends the description as plain
+ * text (`deskripsi_teks`), and this page splits it into paragraphs, so a
+ * paste of unknown markup can never become part of the site.
+ */
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Container from "@studio/core/components/Container.astro";
+import { t } from "../../lib/site";
+import { getAllKegiatan, type Kegiatan } from "../../lib/api";
+
+interface Props {
+  kegiatan: Kegiatan;
+  others: Kegiatan[];
+}
+
+export async function getStaticPaths() {
+  let agenda: Kegiatan[] = [];
+
+  try {
+    agenda = (await getAllKegiatan()).data;
+  } catch {
+    return [];
+  }
+
+  return agenda.map((kegiatan) => ({
+    params: { slug: kegiatan.slug },
+    props: {
+      kegiatan,
+      others: agenda
+        .filter(
+          (other) =>
+            other.slug !== kegiatan.slug &&
+            (other.status === "akan_datang" || other.status === "berlangsung")
+        )
+        .sort((a, b) =>
+          `${a.tanggal_mulai.slice(0, 10)}T${a.waktu_mulai}`.localeCompare(
+            `${b.tanggal_mulai.slice(0, 10)}T${b.waktu_mulai}`
+          )
+        )
+        .slice(0, 3),
+    },
+  }));
+}
+
+const { kegiatan, others } = Astro.props as Props;
+
+const utcDay = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+
+const dayLong = new Intl.DateTimeFormat("id-ID", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+const dateShort = new Intl.DateTimeFormat("id-ID", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+const clock = (day: string, waktu: string) => {
+  const at = new Date(`${day.slice(0, 10)}T${waktu}Z`);
+  return `${at.getUTCHours().toString().padStart(2, "0")}.${at
+    .getUTCMinutes()
+    .toString()
+    .padStart(2, "0")}`;
+};
+
+const startDay = kegiatan.tanggal_mulai.slice(0, 10);
+const endDay = (kegiatan.tanggal_selesai ?? kegiatan.tanggal_mulai).slice(0, 10);
+const waktu =
+  startDay === endDay
+    ? `${clock(startDay, kegiatan.waktu_mulai)}${
+        kegiatan.waktu_selesai ? `–${clock(endDay, kegiatan.waktu_selesai)}` : ""
+      } ${t("kegiatan.wib")}`
+    : `${clock(startDay, kegiatan.waktu_mulai)} ${
+        t("kegiatan.wib")
+      } – ${clock(endDay, kegiatan.waktu_selesai ?? kegiatan.waktu_mulai)} ${t("kegiatan.wib")}`;
+
+const keterangan =
+  startDay === endDay
+    ? dayLong.format(utcDay(startDay))
+    : t("kegiatan.dateRange", {
+        start: dayLong.format(utcDay(startDay)),
+        end: dayLong.format(utcDay(endDay)),
+      });
+
+const STATUS_LABEL: Record<Kegiatan["status"], string> = {
+  akan_datang: t("kegiatan.statusAkanDatang"),
+  berlangsung: t("kegiatan.statusBerlangsung"),
+  selesai: t("kegiatan.statusSelesai"),
+  dibatalkan: t("kegiatan.statusDibatalkan"),
+};
+
+const paragraphs = kegiatan.deskripsi_teks
+  .split(/\n{2,}/)
+  .map((part) => part.trim())
+  .filter(Boolean);
+---
+
+<BaseLayout
+  title={kegiatan.nama_kegiatan}
+  description={kegiatan.deskripsi_teks.slice(0, 160)}
+>
+  <section class="detail-kegiatan">
+    <Container>
+      <p class="detail-kegiatan__back">
+        <a href="/jadwal/">← {t("kegiatan.detailBack")}</a>
+      </p>
+
+      <header class="detail-kegiatan__header">
+        <p class="detail-kegiatan__eyebrow">{t("kegiatan.eyebrow")}</p>
+        <div class="detail-kegiatan__title-row">
+          <h1 class="detail-kegiatan__title">{kegiatan.nama_kegiatan}</h1>
+          <span class="detail-kegiatan__badge" data-status={kegiatan.status}>
+            {STATUS_LABEL[kegiatan.status]}
+          </span>
+        </div>
+      </header>
+
+      <div class="detail-kegiatan__layout">
+        <div class="detail-kegiatan__main">
+          <dl class="detail-kegiatan__meta" aria-label={t("kegiatan.detailInfoAria")}>
+            <div>
+              <dt>{t("kegiatan.detailWhen")}</dt>
+              <dd>{keterangan}</dd>
+              <dd>{waktu}</dd>
+            </div>
+            <div>
+              <dt>{t("kegiatan.locationLabel")}</dt>
+              <dd>{kegiatan.lokasi}</dd>
+            </div>
+            {
+              kegiatan.penceramah_atau_penanggung_jawab && (
+                <div>
+                  <dt>{t("kegiatan.speakerLabel")}</dt>
+                  <dd>{kegiatan.penceramah_atau_penanggung_jawab}</dd>
+                </div>
+              )
+            }
+          </dl>
+
+          {
+            paragraphs.length > 0 && (
+              <section class="detail-kegiatan__about">
+                <h2>{t("kegiatan.detailAbout")}</h2>
+                {paragraphs.map((part) => (
+                  <p>{part}</p>
+                ))}
+              </section>
+            )
+          }
+        </div>
+
+        {
+          kegiatan.poster_url && (
+            <figure class="detail-kegiatan__poster">
+              <img
+                src={kegiatan.poster_url}
+                alt={t("kegiatan.posterAlt", { name: kegiatan.nama_kegiatan })}
+                loading="lazy"
+              />
+            </figure>
+          )
+        }
+      </div>
+
+      {
+        others.length > 0 && (
+          <section class="detail-kegiatan__others">
+            <h2>{t("kegiatan.detailRelated")}</h2>
+            <ul>
+              {others.map((other) => (
+                <li>
+                  <a href={`/jadwal/${encodeURIComponent(other.slug)}/`}>
+                    <span class="detail-kegiatan__others-date">
+                      {dateShort.format(utcDay(other.tanggal_mulai))}
+                    </span>
+                    <span class="detail-kegiatan__others-name">{other.nama_kegiatan}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+    </Container>
+  </section>
+</BaseLayout>
+
+<style>
+  .detail-kegiatan {
+    padding-block: var(--ts-space-12) var(--ts-section-y);
+  }
+  .detail-kegiatan__back {
+    margin: 0;
+    font-size: var(--ts-text-sm);
+  }
+  .detail-kegiatan__back a {
+    color: var(--ts-text-muted);
+    text-decoration: none;
+  }
+  .detail-kegiatan__back a:hover {
+    color: var(--ts-text);
+  }
+  .detail-kegiatan__back a:focus-visible {
+    outline: none;
+    box-shadow: var(--ts-focus-ring);
+  }
+  .detail-kegiatan__header {
+    margin-top: var(--ts-space-8);
+  }
+  .detail-kegiatan__eyebrow {
+    margin: 0 0 var(--ts-space-3);
+    font-size: var(--larkin-label-size);
+    font-weight: var(--ts-weight-medium);
+    letter-spacing: var(--larkin-label-tracking);
+    text-transform: uppercase;
+    color: var(--ts-text-subtle);
+  }
+  .detail-kegiatan__title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ts-space-4);
+  }
+  .detail-kegiatan__title {
+    margin: 0;
+    font-family: var(--ts-font-display);
+    font-size: var(--ts-text-3xl);
+    font-weight: var(--ts-weight-bold);
+    line-height: var(--ts-leading-snug);
+    letter-spacing: var(--ts-tracking-tight);
+    color: var(--ts-text);
+    max-width: 44rem;
+  }
+  .detail-kegiatan__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--ts-space-3);
+    border-radius: 999px;
+    font-size: var(--ts-text-xs);
+    font-weight: var(--ts-weight-medium);
+    white-space: nowrap;
+  }
+  .detail-kegiatan__badge[data-status="akan_datang"] {
+    background: var(--ts-color-info-soft);
+    color: var(--ts-color-info);
+  }
+  .detail-kegiatan__badge[data-status="berlangsung"] {
+    background: var(--ts-color-warning-soft);
+    color: var(--ts-color-warning);
+  }
+  .detail-kegiatan__badge[data-status="selesai"] {
+    background: color-mix(in srgb, var(--ts-color-success) 10%, var(--ts-surface));
+    color: var(--ts-color-success);
+  }
+  .detail-kegiatan__badge[data-status="dibatalkan"] {
+    background: var(--ts-color-error-soft);
+    color: var(--ts-color-error);
+  }
+
+  .detail-kegiatan__layout {
+    display: grid;
+    gap: var(--ts-space-10);
+    margin-top: var(--ts-space-10);
+  }
+  @media (min-width: 900px) {
+    .detail-kegiatan__layout {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+      align-items: start;
+    }
+  }
+  .detail-kegiatan__meta {
+    display: grid;
+    gap: var(--ts-space-5);
+    margin: 0;
+    padding: var(--ts-space-5) 0;
+    border-top: 1px solid var(--ts-border);
+    border-bottom: 1px solid var(--ts-border);
+  }
+  @media (min-width: 640px) {
+    .detail-kegiatan__meta {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+  }
+  .detail-kegiatan__meta dt {
+    font-size: var(--ts-text-xs);
+    font-weight: var(--ts-weight-medium);
+    letter-spacing: var(--ts-tracking-wide);
+    text-transform: uppercase;
+    color: var(--ts-text-subtle);
+  }
+  .detail-kegiatan__meta dd {
+    margin: var(--ts-space-1) 0 0;
+    font-size: var(--ts-text-sm);
+    color: var(--ts-text);
+  }
+  .detail-kegiatan__about {
+    margin-top: var(--ts-space-10);
+  }
+  .detail-kegiatan__about h2 {
+    margin: 0 0 var(--ts-space-4);
+    font-family: var(--ts-font-display);
+    font-size: var(--ts-text-lg);
+    font-weight: var(--ts-weight-semibold);
+    color: var(--ts-text);
+  }
+  .detail-kegiatan__about p {
+    margin: 0 0 var(--ts-space-4);
+    font-size: var(--ts-text-base);
+    line-height: var(--ts-leading-normal);
+    color: var(--ts-text-muted);
+    max-width: var(--ts-prose-max);
+  }
+  .detail-kegiatan__poster {
+    margin: 0;
+  }
+  .detail-kegiatan__poster img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--ts-border);
+    border-radius: var(--ts-radius-lg);
+  }
+  .detail-kegiatan__others {
+    margin-top: var(--ts-section-y);
+  }
+  .detail-kegiatan__others h2 {
+    margin: 0 0 var(--ts-space-4);
+    font-family: var(--ts-font-display);
+    font-size: var(--ts-text-lg);
+    font-weight: var(--ts-weight-semibold);
+    color: var(--ts-text);
+  }
+  .detail-kegiatan__others ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--ts-space-3);
+  }
+  @media (min-width: 768px) {
+    .detail-kegiatan__others ul {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .detail-kegiatan__others a {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ts-space-1);
+    padding: var(--ts-space-4);
+    border: 1px solid var(--ts-border);
+    border-radius: var(--ts-radius-lg);
+    background: var(--ts-c-card-bg);
+    text-decoration: none;
+  }
+  .detail-kegiatan__others a:hover {
+    border-color: var(--ts-border-strong);
+  }
+  .detail-kegiatan__others a:focus-visible {
+    outline: none;
+    box-shadow: var(--ts-focus-ring);
+  }
+  .detail-kegiatan__others-date {
+    font-size: var(--ts-text-xs);
+    letter-spacing: var(--ts-tracking-wide);
+    text-transform: uppercase;
+    color: var(--ts-text-subtle);
+  }
+  .detail-kegiatan__others-name {
+    font-weight: var(--ts-weight-medium);
+    color: var(--ts-text);
+  }
+</style>

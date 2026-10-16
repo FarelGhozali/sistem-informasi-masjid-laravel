@@ -8,6 +8,11 @@
  * the base address and the response shapes in a single place so a page never
  * builds a URL by hand.
  *
+ * The kegiatan pages use both halves of that arrangement: the agenda list is
+ * read in the browser (an event added in the panel appears on the next load),
+ * while the per-event detail pages are generated from the same API during
+ * the build, where the slugs are known.
+ *
  * PUBLIC_API_BASE_URL is set in .env (see .env.example). The PUBLIC_ prefix
  * is what makes it readable from the browser; the fallback is the address
  * `php artisan serve` uses in development. In production it points at the
@@ -115,6 +120,76 @@ export async function getAllKeuanganTransaksi(): Promise<{
   const rest = await Promise.all(
     Array.from({ length: pages - 1 }, (_, i) =>
       getKeuanganTransaksi({ page: i + 2, limit: ALL_TRANSAKSI_PAGE_LIMIT })
+    )
+  );
+  return {
+    data: [first, ...rest].flatMap((res) => res.data),
+    total: first.total,
+    truncated: first.last_page > pages,
+  };
+}
+
+export type StatusKegiatan = "akan_datang" | "berlangsung" | "selesai" | "dibatalkan";
+
+export interface Kegiatan {
+  id: number;
+  nama_kegiatan: string;
+  slug: string;
+  /** The speaker, or whoever in the takmir runs the event. */
+  penceramah_atau_penanggung_jawab: string | null;
+  lokasi: string;
+  /** ISO timestamps; only the date part is meaningful, same as keuangan. */
+  tanggal_mulai: string;
+  /** Wall-clock time ("19:30:00"), not an instant — format it as written. */
+  waktu_mulai: string;
+  tanggal_selesai: string | null;
+  waktu_selesai: string | null;
+  status: StatusKegiatan;
+  /** RichEditor HTML — never rendered with innerHTML on the public site. */
+  deskripsi: string | null;
+  /** The description the takmir wrote, as plain text. */
+  deskripsi_teks: string;
+  poster: string | null;
+  /** Ready-to-use URL for the uploaded poster, or null when none. */
+  poster_url: string | null;
+  updated_at: string;
+}
+
+/** One page of the agenda, earliest event first. */
+export async function getKegiatan(
+  opts: { page?: number; status?: StatusKegiatan | ""; limit?: number } = {}
+): Promise<Paginated<Kegiatan>> {
+  const params: Record<string, string> = {};
+  /* Page 1 is the default; sending it would only lengthen the URL. */
+  if (opts.page && opts.page > 1) params.page = String(opts.page);
+  if (opts.status) params.status = opts.status;
+  if (opts.limit) params.limit = String(opts.limit);
+  const res = await apiGet<ApiEnvelope<Paginated<Kegiatan>>>("/v1/kegiatan", params);
+  return res.data;
+}
+
+/**
+ * Every event in the agenda, in one array.
+ *
+ * The jadwal page groups the events by what is still ahead and what has
+ * passed, and the detail pages are generated from the same list at build
+ * time — both need the whole agenda, not one page of it. The seatbelt is
+ * the same shape as the ledger's: 100 rows a page, ten pages, and
+ * `truncated` instead of pretending the list was complete.
+ */
+export const ALL_KEGIATAN_PAGE_LIMIT = 100;
+export const ALL_KEGIATAN_MAX_PAGES = 10;
+
+export async function getAllKegiatan(): Promise<{
+  data: Kegiatan[];
+  total: number;
+  truncated: boolean;
+}> {
+  const first = await getKegiatan({ page: 1, limit: ALL_KEGIATAN_PAGE_LIMIT });
+  const pages = Math.min(first.last_page, ALL_KEGIATAN_MAX_PAGES);
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, i) =>
+      getKegiatan({ page: i + 2, limit: ALL_KEGIATAN_PAGE_LIMIT })
     )
   );
   return {

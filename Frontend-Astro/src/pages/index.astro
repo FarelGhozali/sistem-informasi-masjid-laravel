@@ -13,7 +13,6 @@ import Button from "@studio/core/components/Button.astro";
 import SectionHeading from "@studio/core/components/SectionHeading.astro";
 import LocationCard from "../components/LocationCard.astro";
 import OpenStatus from "../components/OpenStatus.astro";
-import MenuList from "../components/MenuList.astro";
 import WorkspaceInfo from "../components/WorkspaceInfo.astro";
 import GalleryStrip from "../components/GalleryStrip.astro";
 import FaqList from "../components/FaqList.astro";
@@ -23,9 +22,6 @@ import { cafeSchema, faqSchema } from "@studio/core/utils/seo";
 
 const locations = await getLocations();
 const primary = locations.find((l) => l.data.primary) ?? locations[0];
-const featured = (await getCollection("menu"))
-  .filter((i) => i.data.featured && i.data.available)
-  .sort((a, b) => a.data.order - b.data.order);
 const faqs = (await getCollection("faq")).sort((a, b) => a.data.order - b.data.order);
 
 const heroImages = import.meta.glob<{ default: ImageMetadata }>("../assets/images/01-hero*.jpg", {
@@ -165,32 +161,25 @@ const schema = [
     }
   </section>
 
-  {/* Menu highlights */}
-  {
-    featured.length > 0 && (
-      <section class="featured">
-        <Container class="featured__grid">
-          <SectionHeading
-            eyebrow={t("menu.eyebrow")}
-            title={t("menu.title")}
-            subtitle={t("menu.subtitle")}
-          />
-          <div class="featured__list">
-            <MenuList
-              items={featured}
-              categories={[...new Set(featured.map((i) => i.data.category))]}
-              headingLevel="h3"
-            />
-          </div>
-          <p class="featured__cta">
-            <Button href="/jadwal/" variant="secondary">
-              {t("menu.viewFull")}
-            </Button>
-          </p>
-        </Container>
-      </section>
-    )
-  }
+  {/* Kegiatan mendatang — the agenda the takmir keeps in the panel, read
+      from the API in the browser the same way /jadwal/ reads it. The
+      section ships a loading line and fills itself in; without JavaScript
+      it stays a pointer to the agenda page. */}
+  <section class="home-kegiatan" id="kegiatan">
+    <Container>
+      <SectionHeading
+        eyebrow={t("kegiatan.homeEyebrow")}
+        title={t("kegiatan.homeTitle")}
+        subtitle={t("kegiatan.homeSubtitle")}
+      />
+      <div class="home-kegiatan__list" id="beranda-kegiatan">
+        <p class="home-kegiatan__status">{t("kegiatan.loading")}</p>
+      </div>
+      <p class="home-kegiatan__cta">
+        <Button href="/jadwal/" variant="secondary">{t("kegiatan.homeCta")}</Button>
+      </p>
+    </Container>
+  </section>
 
   <WorkspaceInfo />
 
@@ -231,6 +220,137 @@ const schema = [
     </Container>
   </section>
 </BaseLayout>
+
+<script>
+  import { getAllKegiatan, type Kegiatan } from "../lib/api";
+  import { t } from "../lib/site";
+
+  const listHost = document.getElementById("beranda-kegiatan");
+  if (listHost) {
+    const utcDay = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+    const dayNum = new Intl.DateTimeFormat("id-ID", { day: "numeric", timeZone: "UTC" });
+    const monthShort = new Intl.DateTimeFormat("id-ID", { month: "short", timeZone: "UTC" });
+
+    const clock = (day: string, waktu: string) => {
+      const at = new Date(`${day.slice(0, 10)}T${waktu}Z`);
+      return `${at.getUTCHours().toString().padStart(2, "0")}.${at
+        .getUTCMinutes()
+        .toString()
+        .padStart(2, "0")}`;
+    };
+
+    function element(tag: string, className?: string, text?: string): HTMLElement {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function card(k: Kegiatan): HTMLElement {
+      const link = element("a", "home-kegiatan__card") as HTMLAnchorElement;
+      link.href = `/jadwal/${encodeURIComponent(k.slug)}/`;
+
+      const date = element(
+        "span",
+        "home-kegiatan__date",
+        `${dayNum.format(utcDay(k.tanggal_mulai))} ${monthShort.format(utcDay(k.tanggal_mulai))}`
+      );
+      const name = element("span", "home-kegiatan__name", k.nama_kegiatan);
+      const meta = element(
+        "span",
+        "home-kegiatan__meta",
+        `${clock(k.tanggal_mulai, k.waktu_mulai)} ${t("kegiatan.wib")} · ${k.lokasi}`
+      );
+
+      link.append(date, name, meta);
+      return link;
+    }
+
+    (async () => {
+      try {
+        const agenda = await getAllKegiatan();
+        const upcoming = agenda.data
+          .filter((k) => k.status === "akan_datang" || k.status === "berlangsung")
+          .sort((a, b) =>
+            `${a.tanggal_mulai.slice(0, 10)}T${a.waktu_mulai}`.localeCompare(
+              `${b.tanggal_mulai.slice(0, 10)}T${b.waktu_mulai}`
+            )
+          )
+          .slice(0, 3);
+
+        if (upcoming.length === 0) {
+          listHost.replaceChildren(element("p", "home-kegiatan__status", t("kegiatan.homeEmpty")));
+          return;
+        }
+
+        listHost.replaceChildren(...upcoming.map(card));
+      } catch {
+        listHost.replaceChildren(element("p", "home-kegiatan__status", t("kegiatan.error")));
+      }
+    })();
+  }
+</script>
+
+<style is:global>
+  /* Global, not scoped: the cards are built by the script above. */
+  .home-kegiatan {
+    padding-block: var(--ts-section-y);
+    background: var(--ts-surface-alt);
+  }
+  .home-kegiatan__list {
+    margin-top: var(--ts-space-10);
+    display: grid;
+    gap: var(--ts-space-4);
+  }
+  @media (min-width: 768px) {
+    .home-kegiatan__list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .home-kegiatan__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ts-space-2);
+    padding: var(--ts-space-5);
+    border: 1px solid var(--ts-border);
+    border-radius: var(--ts-radius-lg);
+    background: var(--ts-c-card-bg);
+    text-decoration: none;
+  }
+  .home-kegiatan__card:hover {
+    border-color: var(--ts-border-strong);
+  }
+  .home-kegiatan__card:focus-visible {
+    outline: none;
+    box-shadow: var(--ts-focus-ring);
+  }
+  .home-kegiatan__date {
+    font-size: var(--ts-text-xs);
+    font-weight: var(--ts-weight-medium);
+    letter-spacing: var(--ts-tracking-wide);
+    text-transform: uppercase;
+    color: var(--ts-text-subtle);
+  }
+  .home-kegiatan__name {
+    font-family: var(--ts-font-display);
+    font-size: var(--ts-text-lg);
+    font-weight: var(--ts-weight-semibold);
+    line-height: var(--ts-leading-snug);
+    color: var(--ts-text);
+  }
+  .home-kegiatan__meta {
+    font-size: var(--ts-text-sm);
+    color: var(--ts-text-muted);
+  }
+  .home-kegiatan__status {
+    margin: 0;
+    font-size: var(--ts-text-sm);
+    color: var(--ts-text-muted);
+  }
+  .home-kegiatan__cta {
+    margin: var(--ts-space-10) 0 0;
+  }
+</style>
 
 <style>
   .hero {
@@ -382,46 +502,15 @@ const schema = [
     text-underline-offset: 0.3em;
   }
 
-  .featured {
-    padding-block: var(--ts-section-y);
-    background: var(--ts-surface-alt);
-  }
-  .featured__list {
-    margin-top: var(--ts-space-10);
-    max-width: 44rem;
-  }
-  .featured__cta {
-    margin: var(--ts-space-10) 0 0;
-  }
-  /* Heading on the left, the list on the right, so the section uses the
-     whole frame instead of a column on the left with the right half empty.
-     The Container is a core component, so its class is reached with
-     :global() from inside this section. */
-  @media (min-width: 1024px) {
-    .featured :global(.featured__grid) {
-      display: grid;
-      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-      column-gap: var(--ts-space-16);
-      align-items: start;
-    }
-    .featured :global(.featured__grid > :first-child) {
-      grid-row: 1 / span 2;
-    }
-    .featured__list,
-    .featured__cta {
-      grid-column: 2;
-    }
-    .featured__list {
-      margin-top: 0;
-      max-width: none;
-    }
-  }
-
   .faq-section {
     padding-block: var(--ts-section-y);
   }
   .faq-section__list {
     margin-top: var(--ts-space-10);
+  }
+  
+  .faq-section__list :global(.faq) {
+    max-width: none;
   }
 
   .say-hello {
