@@ -4,8 +4,12 @@
 #
 #   docker compose -f compose.production.yaml up -d --build
 #
+# Reached through an existing Traefik on the external `proxy` network; no host
+# port is published. The `web` service answers for APP_DOMAIN (default
+# masjid.farelghozali.my.id) and masjid.home.
+#
 # Overridable via the environment or a .env file next to this file:
-# WEB_PORT, SITE_URL, APP_URL, PUBLIC_API_BASE_URL, DB_DATABASE, DB_USERNAME,
+# APP_DOMAIN, SITE_URL, APP_URL, PUBLIC_API_BASE_URL, DB_DATABASE, DB_USERNAME,
 # DB_PASSWORD, SEED_DEMO_DATA.
 name: masjid
 
@@ -34,7 +38,7 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
       APP_KEY: ${APP_KEY:-}
-      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_URL: ${APP_URL:-http://masjid.farelghozali.my.id}
       APP_LOCALE: id
       APP_FALLBACK_LOCALE: id
       APP_FAKER_LOCALE: id_ID
@@ -63,10 +67,26 @@ services:
       context: .
       dockerfile: docker/production/web/Dockerfile
       args:
-        SITE: ${SITE_URL:-http://localhost:8080}
+        SITE: ${SITE_URL:-http://masjid.farelghozali.my.id}
         PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-/api}
-    ports:
-      - "${WEB_PORT:-8080}:80"
+    networks:
+      - default
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.masjid.rule=Host(`masjid.home`)"
+      - "traefik.http.routers.masjid.entrypoints=web"
+
+      - "traefik.http.routers.masjid-https.rule=Host(`masjid.home`)"
+      - "traefik.http.routers.masjid-https.entrypoints=websecure"
+      - "traefik.http.routers.masjid-https.tls=true"
+
+      #cloudflare tunnel
+      - "traefik.http.routers.masjid-ct.rule=Host(`masjid.farelghozali.my.id`)"
+      - "traefik.http.routers.masjid-ct.entrypoints=web"
+
+      - "traefik.http.routers.masjid.service=masjid"
+      - "traefik.http.services.masjid.loadbalancer.server.port=80"
     depends_on:
       - app
     restart: unless-stopped
@@ -74,3 +94,8 @@ services:
 volumes:
   db-data:
   app-storage:
+
+networks:
+  proxy:
+    external: true
+    name: proxy
