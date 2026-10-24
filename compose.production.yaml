@@ -74,18 +74,21 @@ services:
       - proxy
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
       - "traefik.http.routers.masjid.rule=Host(`masjid.home`)"
       - "traefik.http.routers.masjid.entrypoints=web"
+      - "traefik.http.routers.masjid.service=masjid"
 
       - "traefik.http.routers.masjid-https.rule=Host(`masjid.home`)"
       - "traefik.http.routers.masjid-https.entrypoints=websecure"
       - "traefik.http.routers.masjid-https.tls=true"
+      - "traefik.http.routers.masjid-https.service=masjid"
 
       #cloudflare tunnel
       - "traefik.http.routers.masjid-ct.rule=Host(`masjid.farelghozali.my.id`)"
       - "traefik.http.routers.masjid-ct.entrypoints=web"
+      - "traefik.http.routers.masjid-ct.service=masjid"
 
-      - "traefik.http.routers.masjid.service=masjid"
       - "traefik.http.services.masjid.loadbalancer.server.port=80"
     depends_on:
       - app
