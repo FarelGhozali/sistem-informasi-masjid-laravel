@@ -168,6 +168,12 @@ export async function getKegiatan(
   return res.data;
 }
 
+/** One event by slug, for the client-rendered detail fallback. */
+export async function getKegiatanBySlug(slug: string): Promise<Kegiatan> {
+  const res = await apiGet<ApiEnvelope<Kegiatan>>(`/v1/kegiatan/${encodeURIComponent(slug)}`);
+  return res.data;
+}
+
 /**
  * Every event in the agenda, in one array.
  *

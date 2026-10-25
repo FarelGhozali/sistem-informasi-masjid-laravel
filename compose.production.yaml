@@ -4,13 +4,19 @@
 #
 #   docker compose -f compose.production.yaml up -d --build
 #
-# Reached through an existing Traefik on the external `proxy` network; no host
-# port is published. The `web` service answers for APP_DOMAIN (default
-# masjid.farelghozali.my.id) and masjid.home.
+# The `web` service is published directly on the host at
+# http://localhost:${WEB_PORT:-8081} (override WEB_PORT to change it), so the
+# stack can be debugged without Traefik. The Traefik labels and external
+# `proxy` network are kept below but commented out; uncomment them when the
+# stack is ready to sit behind the existing proxy again.
 #
 # Overridable via the environment or a .env file next to this file:
-# APP_DOMAIN, SITE_URL, APP_URL, PUBLIC_API_BASE_URL, DB_DATABASE, DB_USERNAME,
-# DB_PASSWORD, SEED_DEMO_DATA.
+# WEB_PORT, APP_DOMAIN, SITE_URL, APP_URL, PUBLIC_API_BASE_URL, DB_DATABASE,
+# DB_USERNAME, DB_PASSWORD, SEED_DEMO_DATA.
+#
+# For local testing, set APP_URL to the published origin (for example
+# APP_URL=http://localhost:8081) so generated storage/poster URLs include the
+# host port. A domain URL is still required for production deployments.
 name: masjid
 
 services:
@@ -69,27 +75,33 @@ services:
       args:
         SITE: ${SITE_URL:-http://masjid.farelghozali.my.id}
         PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-/api}
-    networks:
-      - default
-      - proxy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=proxy"
-      - "traefik.http.routers.masjid.rule=Host(`masjid.home`)"
-      - "traefik.http.routers.masjid.entrypoints=web"
-      - "traefik.http.routers.masjid.service=masjid"
-
-      - "traefik.http.routers.masjid-https.rule=Host(`masjid.home`)"
-      - "traefik.http.routers.masjid-https.entrypoints=websecure"
-      - "traefik.http.routers.masjid-https.tls=true"
-      - "traefik.http.routers.masjid-https.service=masjid"
-
-      #cloudflare tunnel
-      - "traefik.http.routers.masjid-ct.rule=Host(`masjid.farelghozali.my.id`)"
-      - "traefik.http.routers.masjid-ct.entrypoints=web"
-      - "traefik.http.routers.masjid-ct.service=masjid"
-
-      - "traefik.http.services.masjid.loadbalancer.server.port=80"
+    ports:
+      - "${WEB_PORT:-8081}:80"
+    volumes:
+      # Read-only: nginx serves uploaded posters from here, PHP-FPM writes.
+      - app-storage:/var/www/html/storage:ro
+    # Uncomment to put this service behind the existing Traefik again.
+    # networks:
+    #   - default
+    #   - proxy
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.docker.network=proxy"
+    #   - "traefik.http.routers.masjid.rule=Host(`masjid.home`)"
+    #   - "traefik.http.routers.masjid.entrypoints=web"
+    #   - "traefik.http.routers.masjid.service=masjid"
+    #
+    #   - "traefik.http.routers.masjid-https.rule=Host(`masjid.home`)"
+    #   - "traefik.http.routers.masjid-https.entrypoints=websecure"
+    #   - "traefik.http.routers.masjid-https.tls=true"
+    #   - "traefik.http.routers.masjid-https.service=masjid"
+    #
+    #   #cloudflare tunnel
+    #   - "traefik.http.routers.masjid-ct.rule=Host(`masjid.farelghozali.my.id`)"
+    #   - "traefik.http.routers.masjid-ct.entrypoints=web"
+    #   - "traefik.http.routers.masjid-ct.service=masjid"
+    #
+    #   - "traefik.http.services.masjid.loadbalancer.server.port=80"
     depends_on:
       - app
     restart: unless-stopped
@@ -98,7 +110,8 @@ volumes:
   db-data:
   app-storage:
 
-networks:
-  proxy:
-    external: true
-    name: proxy
+# Uncomment together with the `web.networks` block above when using Traefik.
+# networks:
+#   proxy:
+#     external: true
+#     name: proxy

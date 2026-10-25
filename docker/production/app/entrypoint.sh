@@ -50,9 +50,14 @@ if [ "${SEED_DEMO_DATA:-true}" = "true" ]; then
   fi
 fi
 
+# public/storage is a symlink created at runtime: the storage directory itself
+# lives on a volume, so the link cannot be baked into the image. --force makes
+# a stale link from a previous image harmless.
+echo "entrypoint: linking public storage"
+php artisan storage:link --force
+
 echo "entrypoint: caching configuration, routes and views"
 php artisan optimize
 
 echo "entrypoint: ready"
 exec php-fpm
-z

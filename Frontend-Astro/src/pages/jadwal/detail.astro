@@ -1,0 +1,523 @@
+---
+/**
+ * Client-rendered fallback for event detail pages.
+ *
+ * Statically generated detail pages (see [slug].astro) are preferred because
+ * they ship as real HTML. This page covers the slugs that were not generated
+ * at build time: the API was unreachable during the image build, or the event
+ * was added after the last deploy. Nginx serves it for any /jadwal/<slug>/
+ * path without a matching file, and the script below reads the slug from the
+ * address bar and fetches the event from the API.
+ *
+ * All data is written into the DOM with textContent. The rich description is
+ * never rendered as HTML; the API also sends it as plain text.
+ */
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Container from "@studio/core/components/Container.astro";
+import { t } from "../../lib/site";
+---
+
+<BaseLayout title={t("kegiatan.pageTitle")} description={t("kegiatan.pageSubtitle")}>
+  <section class="detail-kegiatan">
+    <Container>
+      <p class="detail-kegiatan__back">
+        <a href="/jadwal/">← {t("kegiatan.detailBack")}</a>
+      </p>
+
+      <div id="detail-status" aria-live="polite">
+        <p class="detail-kegiatan__status">{t("kegiatan.detailLoading")}</p>
+      </div>
+
+      <div id="detail-data" hidden>
+        <header class="detail-kegiatan__header">
+          <p class="detail-kegiatan__eyebrow">{t("kegiatan.eyebrow")}</p>
+          <div class="detail-kegiatan__title-row">
+            <h1 class="detail-kegiatan__title" id="detail-title"></h1>
+            <span class="detail-kegiatan__badge" id="detail-badge"></span>
+          </div>
+        </header>
+
+        <div class="detail-kegiatan__layout">
+          <div class="detail-kegiatan__main">
+            <dl class="detail-kegiatan__meta" aria-label={t("kegiatan.detailInfoAria")}>
+              <div>
+                <dt>{t("kegiatan.detailWhen")}</dt>
+                <dd id="detail-date"></dd>
+                <dd id="detail-time"></dd>
+              </div>
+              <div>
+                <dt>{t("kegiatan.locationLabel")}</dt>
+                <dd id="detail-location"></dd>
+              </div>
+              <div id="detail-speaker-item" hidden>
+                <dt>{t("kegiatan.speakerLabel")}</dt>
+                <dd id="detail-speaker"></dd>
+              </div>
+            </dl>
+
+            <section class="detail-kegiatan__about" id="detail-about" hidden>
+              <h2>{t("kegiatan.detailAbout")}</h2>
+              <div id="detail-paragraphs"></div>
+            </section>
+          </div>
+
+          <figure class="detail-kegiatan__poster" id="detail-poster" hidden>
+            <img id="detail-poster-image" alt="" loading="lazy" />
+          </figure>
+        </div>
+
+        <section class="detail-kegiatan__others" id="detail-others" hidden>
+          <h2>{t("kegiatan.detailRelated")}</h2>
+          <ul id="detail-others-list"></ul>
+        </section>
+      </div>
+
+      <noscript>
+        <p class="detail-kegiatan__status">{t("kegiatan.noscript")}</p>
+      </noscript>
+    </Container>
+  </section>
+</BaseLayout>
+
+<script>
+  import {
+    getAllKegiatan,
+    getKegiatanBySlug,
+    type Kegiatan,
+    type StatusKegiatan,
+  } from "../../lib/api";
+  import { t } from "../../lib/site";
+
+  const STATUS_LABEL: Record<StatusKegiatan, string> = {
+    akan_datang: t("kegiatan.statusAkanDatang"),
+    berlangsung: t("kegiatan.statusBerlangsung"),
+    selesai: t("kegiatan.statusSelesai"),
+    dibatalkan: t("kegiatan.statusDibatalkan"),
+  };
+
+  const utcDay = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+
+  const dayLong = new Intl.DateTimeFormat("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
+  const dateShort = new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
+  const clock = (day: string, waktu: string) => {
+    const at = new Date(`${day.slice(0, 10)}T${waktu}Z`);
+    return `${at.getUTCHours().toString().padStart(2, "0")}.${at
+      .getUTCMinutes()
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  const slug = decodeURIComponent(
+    window.location.pathname.replace(/^\/jadwal\//, "").replace(/\/+$/, "")
+  );
+
+  const statusHost = document.getElementById("detail-status")!;
+  const dataHost = document.getElementById("detail-data")!;
+  const titleHost = document.getElementById("detail-title")!;
+  const badgeHost = document.getElementById("detail-badge")!;
+  const dateHost = document.getElementById("detail-date")!;
+  const timeHost = document.getElementById("detail-time")!;
+  const locationHost = document.getElementById("detail-location")!;
+  const speakerItem = document.getElementById("detail-speaker-item")!;
+  const speakerHost = document.getElementById("detail-speaker")!;
+  const aboutHost = document.getElementById("detail-about")!;
+  const paragraphsHost = document.getElementById("detail-paragraphs")!;
+  const posterHost = document.getElementById("detail-poster")!;
+  const posterImage = document.getElementById("detail-poster-image") as HTMLImageElement;
+  const othersHost = document.getElementById("detail-others")!;
+  const othersList = document.getElementById("detail-others-list")!;
+
+  function statusLine(text: string, retry?: () => void): HTMLElement {
+    const p = document.createElement("p");
+    p.className = "detail-kegiatan__status";
+    p.textContent = text;
+
+    if (retry) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "detail-kegiatan__retry";
+      button.textContent = t("kegiatan.retry");
+      button.addEventListener("click", retry);
+      p.append(" ", button);
+    }
+
+    return p;
+  }
+
+  function setMeta(selector: string, value: string) {
+    const node = document.querySelector(selector);
+    if (node) node.setAttribute("content", value);
+  }
+
+  function renderRelated(others: Kegiatan[]) {
+    if (others.length === 0) {
+      othersHost.hidden = true;
+      return;
+    }
+
+    othersList.replaceChildren(
+      ...others.map((other) => {
+        const link = document.createElement("a");
+        link.href = `/jadwal/${encodeURIComponent(other.slug)}/`;
+
+        const date = document.createElement("span");
+        date.className = "detail-kegiatan__others-date";
+        date.textContent = dateShort.format(utcDay(other.tanggal_mulai));
+
+        const name = document.createElement("span");
+        name.className = "detail-kegiatan__others-name";
+        name.textContent = other.nama_kegiatan;
+
+        link.append(date, name);
+
+        const item = document.createElement("li");
+        item.append(link);
+        return item;
+      })
+    );
+
+    othersHost.hidden = false;
+  }
+
+  function render(kegiatan: Kegiatan, others: Kegiatan[]) {
+    const startDay = kegiatan.tanggal_mulai.slice(0, 10);
+    const endDay = (kegiatan.tanggal_selesai ?? kegiatan.tanggal_mulai).slice(0, 10);
+    const waktu =
+      startDay === endDay
+        ? `${clock(startDay, kegiatan.waktu_mulai)}${
+            kegiatan.waktu_selesai ? `–${clock(endDay, kegiatan.waktu_selesai)}` : ""
+          } ${t("kegiatan.wib")}`
+        : `${clock(startDay, kegiatan.waktu_mulai)} ${t(
+            "kegiatan.wib"
+          )} – ${clock(endDay, kegiatan.waktu_selesai ?? kegiatan.waktu_mulai)} ${t(
+            "kegiatan.wib"
+          )}`;
+
+    const keterangan =
+      startDay === endDay
+        ? dayLong.format(utcDay(startDay))
+        : t("kegiatan.dateRange", {
+            start: dayLong.format(utcDay(startDay)),
+            end: dayLong.format(utcDay(endDay)),
+          });
+
+    document.title = `${kegiatan.nama_kegiatan} — ${t("site.name")}`;
+
+    const description = kegiatan.deskripsi_teks.slice(0, 160);
+    setMeta('meta[name="description"]', description);
+    setMeta('meta[property="og:title"]', document.title);
+    setMeta('meta[property="og:description"]', description);
+    setMeta('meta[property="og:url"]', window.location.href);
+    document.querySelector('link[rel="canonical"]')?.setAttribute("href", window.location.href);
+
+    titleHost.textContent = kegiatan.nama_kegiatan;
+    badgeHost.textContent = STATUS_LABEL[kegiatan.status];
+    badgeHost.dataset.status = kegiatan.status;
+
+    dateHost.textContent = keterangan;
+    timeHost.textContent = waktu;
+    locationHost.textContent = kegiatan.lokasi;
+
+    if (kegiatan.penceramah_atau_penanggung_jawab) {
+      speakerHost.textContent = kegiatan.penceramah_atau_penanggung_jawab;
+      speakerItem.hidden = false;
+    } else {
+      speakerItem.hidden = true;
+    }
+
+    const paragraphs = kegiatan.deskripsi_teks
+      .split(/\n{2,}/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    paragraphsHost.replaceChildren(
+      ...paragraphs.map((part) => {
+        const p = document.createElement("p");
+        p.textContent = part;
+        return p;
+      })
+    );
+    aboutHost.hidden = paragraphs.length === 0;
+
+    if (kegiatan.poster_url) {
+      posterImage.src = kegiatan.poster_url;
+      posterImage.alt = t("kegiatan.posterAlt", { name: kegiatan.nama_kegiatan });
+      posterHost.hidden = false;
+    } else {
+      posterHost.hidden = true;
+    }
+
+    renderRelated(others);
+
+    statusHost.hidden = true;
+    dataHost.hidden = false;
+  }
+
+  async function load() {
+    if (!slug || slug === "detail") {
+      window.location.replace("/jadwal/");
+      return;
+    }
+
+    statusHost.hidden = false;
+    statusHost.replaceChildren(statusLine(t("kegiatan.detailLoading")));
+    dataHost.hidden = true;
+
+    try {
+      const kegiatan = await getKegiatanBySlug(slug);
+
+      let others: Kegiatan[] = [];
+      try {
+        const agenda = await getAllKegiatan();
+        others = agenda.data
+          .filter(
+            (other) =>
+              other.slug !== kegiatan.slug &&
+              (other.status === "akan_datang" || other.status === "berlangsung")
+          )
+          .sort((a, b) =>
+            `${a.tanggal_mulai.slice(0, 10)}T${a.waktu_mulai}`.localeCompare(
+              `${b.tanggal_mulai.slice(0, 10)}T${b.waktu_mulai}`
+            )
+          )
+          .slice(0, 3);
+      } catch {
+        /* Related events are optional; the detail itself already loaded. */
+      }
+
+      render(kegiatan, others);
+    } catch (error) {
+      const notFound = String(error).includes("API 404");
+      statusHost.replaceChildren(
+        statusLine(
+          notFound ? t("kegiatan.detailNotFound") : t("kegiatan.detailError"),
+          notFound ? undefined : load
+        )
+      );
+    }
+  }
+
+  load();
+</script>
+
+<style is:global>
+  .detail-kegiatan {
+    padding-block: var(--ts-space-12) var(--ts-section-y);
+  }
+  .detail-kegiatan__back {
+    margin: 0;
+    font-size: var(--ts-text-sm);
+  }
+  .detail-kegiatan__back a {
+    color: var(--ts-text-muted);
+    text-decoration: none;
+  }
+  .detail-kegiatan__back a:hover {
+    color: var(--ts-text);
+  }
+  .detail-kegiatan__back a:focus-visible {
+    outline: none;
+    box-shadow: var(--ts-focus-ring);
+  }
+  .detail-kegiatan__status {
+    margin-top: var(--ts-space-8);
+    color: var(--ts-text-muted);
+    font-size: var(--ts-text-sm);
+  }
+  .detail-kegiatan__retry {
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: var(--ts-text);
+    text-decoration: underline;
+    text-decoration-color: var(--ts-border-strong);
+    text-underline-offset: 0.3em;
+    cursor: pointer;
+  }
+  .detail-kegiatan__retry:hover {
+    text-decoration-color: var(--ts-text);
+  }
+  .detail-kegiatan__retry:focus-visible {
+    outline: none;
+    box-shadow: var(--ts-focus-ring);
+  }
+  .detail-kegiatan__header {
+    margin-top: var(--ts-space-8);
+  }
+  .detail-kegiatan__eyebrow {
+    margin: 0 0 var(--ts-space-3);
+    font-size: var(--larkin-label-size);
+    font-weight: var(--ts-weight-medium);
+    letter-spacing: var(--larkin-label-tracking);
+    text-transform: uppercase;
+    color: var(--ts-text-subtle);
+  }
+  .detail-kegiatan__title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ts-space-4);
+  }
+  .detail-kegiatan__title {
+    margin: 0;
+    font-family: var(--ts-font-display);
+    font-size: var(--ts-text-3xl);
+    font-weight: var(--ts-weight-bold);
+    line-height: var(--ts-leading-snug);
+    letter-spacing: var(--ts-tracking-tight);
+    color: var(--ts-text);
+    max-width: 44rem;
+  }
+  .detail-kegiatan__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--ts-space-3);
+    border-radius: 999px;
+    font-size: var(--ts-text-xs);
+    font-weight: var(--ts-weight-medium);
+    white-space: nowrap;
+  }
+  .detail-kegiatan__badge[data-status="akan_datang"] {
+    background: var(--ts-color-info-soft);
+    color: var(--ts-color-info);
+  }
+  .detail-kegiatan__badge[data-status="berlangsung"] {
+    background: var(--ts-color-warning-soft);
+    color: var(--ts-color-warning);
+  }
+  .detail-kegiatan__badge[data-status="selesai"] {
+    background: color-mix(in srgb, var(--ts-color-success) 10%, var(--ts-surface));
+    color: var(--ts-color-success);
+  }
+  .detail-kegiatan__badge[data-status="dibatalkan"] {
+    background: var(--ts-color-error-soft);
+    color: var(--ts-color-error);
+  }
+
+  .detail-kegiatan__layout {
+    display: grid;
+    gap: var(--ts-space-10);
+    margin-top: var(--ts-space-10);
+  }
+  @media (min-width: 900px) {
+    .detail-kegiatan__layout {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+      align-items: start;
+    }
+  }
+  .detail-kegiatan__meta {
+    display: grid;
+    gap: var(--ts-space-5);
+    margin: 0;
+    padding: var(--ts-space-5) 0;
+    border-top: 1px solid var(--ts-border);
+    border-bottom: 1px solid var(--ts-border);
+  }
+  @media (min-width: 640px) {
+    .detail-kegiatan__meta {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+  }
+  .detail-kegiatan__meta dt {
+    font-size: var(--ts-text-xs);
+    font-weight: var(--ts-weight-medium);
+    letter-spacing: var(--ts-tracking-wide);
+    text-transform: uppercase;
+    color: var(--ts-text-subtle);
+  }
+  .detail-kegiatan__meta dd {
+    margin: var(--ts-space-1) 0 0;
+    font-size: var(--ts-text-sm);
+    color: var(--ts-text);
+  }
+  .detail-kegiatan__about {
+    margin-top: var(--ts-space-10);
+  }
+  .detail-kegiatan__about h2 {
+    margin: 0 0 var(--ts-space-4);
+    font-family: var(--ts-font-display);
+    font-size: var(--ts-text-lg);
+    font-weight: var(--ts-weight-semibold);
+    color: var(--ts-text);
+  }
+  .detail-kegiatan__about p {
+    margin: 0 0 var(--ts-space-4);
+    font-size: var(--ts-text-base);
+    line-height: var(--ts-leading-normal);
+    color: var(--ts-text-muted);
+    max-width: var(--ts-prose-max);
+  }
+  .detail-kegiatan__poster {
+    margin: 0;
+  }
+  .detail-kegiatan__poster img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--ts-border);
+    border-radius: var(--ts-radius-lg);
+  }
+  .detail-kegiatan__others {
+    margin-top: var(--ts-section-y);
+  }
+  .detail-kegiatan__others h2 {
+    margin: 0 0 var(--ts-space-4);
+    font-family: var(--ts-font-display);
+    font-size: var(--ts-text-lg);
+    font-weight: var(--ts-weight-semibold);
+    color: var(--ts-text);
+  }
+  .detail-kegiatan__others ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--ts-space-3);
+  }
+  @media (min-width: 768px) {
+    .detail-kegiatan__others ul {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .detail-kegiatan__others a {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ts-space-1);
+    padding: var(--ts-space-4);
+    border: 1px solid var(--ts-border);
+    border-radius: var(--ts-radius-lg);
+    background: var(--ts-c-card-bg);
+    text-decoration: none;
+  }
+  .detail-kegiatan__others a:hover {
+    border-color: var(--ts-border-strong);
+  }
+  .detail-kegiatan__others a:focus-visible {
+    outline: none;
+    box-shadow: var(--ts-focus-ring);
+  }
+  .detail-kegiatan__others-date {
+    font-size: var(--ts-text-xs);
+    letter-spacing: var(--ts-tracking-wide);
+    text-transform: uppercase;
+    color: var(--ts-text-subtle);
+  }
+  .detail-kegiatan__others-name {
+    font-weight: var(--ts-weight-medium);
+    color: var(--ts-text);
+  }
+</style>
